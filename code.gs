@@ -43,7 +43,8 @@ function rosterSS_(){ return SpreadsheetApp.openById(ROSTER_SPREADSHEET_ID); }
 function getOrCreateSheet_(ss,n){ return ss.getSheetByName(n)||ss.insertSheet(n); }
 function setHeaderIfEmpty_(sh,hdr){
   const f=sh.getRange(1,1,1,hdr.length).getValues()[0];
-  if((f||[]).join('')==='') sh.getRange(1,1,1,hdr.length).setValues([hdr]);
+  const isEmpty = (f||[]).join('').trim() === '';
+  if(isEmpty) sh.getRange(1,1,1,hdr.length).setValues([hdr]);
 }
 function readAll_(sh){
   const v=sh.getDataRange().getValues();
@@ -70,6 +71,11 @@ function todayStartKST_(){
   return d;
 }
 function ensureSheets_(){
+  // v2.0.1: ROSTER_SPREADSHEET에 Hand 시트 생성 (헤더 없음, CSV 행 타입별 저장)
+  const rosterSS = rosterSS_();
+  getOrCreateSheet_(rosterSS, 'Hand'); // 헤더 없음
+
+  // v1.x 하위 호환: APP_SPREADSHEET 시트 유지 (Phase 6에서 제거 예정)
   const ss=appSS_();
   setHeaderIfEmpty_(getOrCreateSheet_(ss,SH.HANDS),[
     'hand_id','client_uuid','table_id','hand_no',
@@ -142,26 +148,26 @@ function getConfig(){
   }
 }
 
-/* ==== SAVE (기존) ==== */
+/* ==== SAVE (v2.0.1: Hand 시트 저장) ==== */
 function saveHand(payload){
   ensureSheets_();
   if(!payload) throw new Error('empty payload');
-  return withScriptLock_(()=>_saveCore_(payload));
+  return withScriptLock_(()=>_saveHandToHandSheet_(payload));
 }
 
-/* ==== SAVE + 외부 시트 갱신(승자 없이) ==== */
+/* ==== SAVE + 외부 시트 갱신(v2.0.1: Hand 기반) ==== */
 function saveHandWithExternal(payload, ext){
   ensureSheets_();
   if(!payload) throw new Error('empty payload');
   return withScriptLock_(()=>{
     log_('SAVE_EXT_BEGIN', `table=${payload.table_id||''} started_at=${payload.started_at||''}`, payload.table_id);
-    const saved = _saveCore_(payload); // {ok, hand_id, hand_no, idempotent}
+    const saved = _saveHandToHandSheet_(payload); // {ok, hand_id, hand_no, idempotent}
     log_('SAVE_OK', `hand_id=${saved.hand_id} hand_no=${saved.hand_no} idempotent=${!!saved.idempotent}`, payload.table_id);
 
     let extRes = {updated:false, reason:'no-ext'};
     try{
       if(ext && ext.sheetId){
-        const detail = getHandDetail(saved.hand_id); // {head, acts}
+        const detail = getHandDetailFromHandSheet_(saved.hand_id); // {head, acts}
         extRes = updateExternalVirtual_(ext.sheetId, detail, ext); // no winner, J blank
       }
     }catch(e){
@@ -566,3 +572,446 @@ function log_(code,msg,tableId){
 }
 
 function include_(name){ return HtmlService.createHtmlOutputFromFile(name).getContent(); }
+
+/* ===== v2.0.1: CSV 파싱 함수 (Hand 시트 변환) ===== */
+
+/**
+ * CSV 핸드 블록을 Hand 시트 1개 행으로 변환
+ * @param {Array<Array>} block - GAME/PAYOUTS/HAND/PLAYER/EVENT 행들
+ * @return {Array} - 19개 컬럼 배열
+ */
+function convertBlockToHandRow_(block) {
+  const gameRow = block.find(r => r[1] === 'GAME');
+  const handRow = block.find(r => r[1] === 'HAND');
+  const playerRows = block.filter(r => r[1] === 'PLAYER');
+  const eventRows = block.filter(r => r[1] === 'EVENT');
+
+  const hand = parseHandRow_(handRow);
+  const players = parsePlayerRows_(playerRows);
+  const { events, board_json } = parseEventRows_(eventRows);
+
+  const hand_id = generateHandId_(hand.timestamp);
+  const game_name = gameRow ? String(gameRow[2] || '') : '';
+
+  // initial_pot 계산 (POT_CORRECTION 합계)
+  const initial_pot = events
+    .filter(e => e.event_type === 'POT_CORRECTION')
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  // contributed_pot 계산 (플레이어 베팅 합계)
+  const contributed_pot = events
+    .filter(e => ['BET', 'RAISE', 'CALL', 'ALL-IN'].includes(e.event_type))
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  // final_pot 계산
+  const final_pot = initial_pot + contributed_pot;
+
+  return [
+    hand_id,                      // 1
+    hand.hand_no,                 // 2
+    hand.timestamp,               // 3
+    hand.table_id,                // 4
+    hand.game_type,               // 5
+    hand.stakes_type,             // 6
+    hand.bb,                      // 7
+    hand.sb,                      // 8
+    hand.bb_ante,                 // 9
+    hand.btn_seat,                // 10
+    hand.sb_seat,                 // 11
+    hand.bb_seat,                 // 12
+    JSON.stringify(board_json),   // 13
+    JSON.stringify(players),      // 14
+    JSON.stringify(events),       // 15
+    final_pot,                    // 16
+    game_name,                    // 17
+    initial_pot,                  // 18
+    contributed_pot               // 19
+  ];
+}
+
+/**
+ * HAND 행 파싱 (stakes_type 조건부)
+ */
+function parseHandRow_(row) {
+  if (!row) throw new Error('HAND row missing');
+
+  const stakes_type = String(row[4] || '').trim();
+  const isBBAnte = (stakes_type === 'BB_ANTE');
+
+  return {
+    hand_no: toInt_(row[3]),
+    stakes_type: stakes_type,
+    game_type: String(row[5] || '').trim(),
+    bb: isBBAnte ? toInt_(row[6]) : toInt_(row[9]),
+    sb: isBBAnte ? toInt_(row[8]) : toInt_(row[8]),
+    bb_ante: isBBAnte ? toInt_(row[9]) : toInt_(row[10]),
+    btn_seat: toInt_(row[10]),
+    sb_seat: toInt_(row[11]),
+    bb_seat: toInt_(row[12]),
+    timestamp: Date.parse(row[13]) || Date.now(),
+    table_id: String(row[14] || '').trim()
+  };
+}
+
+/**
+ * PLAYER 행들 파싱 (v2.0.1: hole_cards 배열)
+ */
+function parsePlayerRows_(rows) {
+  return rows.map(r => {
+    const holeCardsRaw = String(r[7] || '').trim();
+    const holeCards = holeCardsRaw
+      ? holeCardsRaw.split(/\s+/)
+      : null;
+
+    return {
+      seat: toInt_(r[3]),
+      name: String(r[2] || '').trim(),
+      start_stack: toInt_(r[5]),
+      end_stack: toInt_(r[6]),
+      hole_cards: holeCards,
+      position: r[8] ? String(r[8]).trim() : null,
+      is_hero: String(r[9]).toUpperCase() === 'TRUE',
+      marker: r[10] ? String(r[10]).trim() : null
+    };
+  });
+}
+
+/**
+ * EVENT 행들 파싱 (v2.0.1: RAISE_TO 처리, BOARD 중복 제거)
+ */
+function parseEventRows_(rows) {
+  const events = [];
+  const boardCards = [];
+  const seenCards = new Set();
+  let seq = 1;
+  let lastBetAmount = 0;
+
+  rows.forEach(r => {
+    const typeRaw = String(r[2] || '').trim();
+    let eventType = typeRaw;
+    let isRaiseTo = false;
+
+    // "RAISE TO" → "RAISE"
+    if (typeRaw === 'RAISE TO') {
+      eventType = 'RAISE';
+      isRaiseTo = true;
+    }
+
+    // BOARD 처리
+    if (eventType === 'BOARD') {
+      const card = String(r[4] || '').trim();
+      if (!card || seenCards.has(card)) return;
+      seenCards.add(card);
+      boardCards.push(card);
+      events.push({
+        seq: seq++,
+        event_type: 'BOARD',
+        card: card,
+        ts: toInt_(r[5])
+      });
+      lastBetAmount = 0; // 새 스트릿
+    }
+    // 베팅 액션
+    else if (['BET', 'RAISE', 'CALL', 'ALL-IN'].includes(eventType)) {
+      const totalBet = toInt_(r[4]) || 0;
+      let actualAmount = totalBet;
+
+      const event = {
+        seq: seq++,
+        event_type: eventType,
+        seat: toInt_(r[3]),
+        amount: actualAmount,
+        ts: toInt_(r[5])
+      };
+
+      // RAISE TO 처리
+      if (isRaiseTo && lastBetAmount > 0) {
+        actualAmount = totalBet - lastBetAmount;
+        event.amount = actualAmount;
+        event.total_bet = totalBet;
+        event.raise_type = 'TO';
+      }
+
+      events.push(event);
+      if (['BET', 'RAISE'].includes(eventType)) {
+        lastBetAmount = totalBet;
+      }
+    }
+    // 기타 액션
+    else if (['CHECK', 'FOLD'].includes(eventType)) {
+      events.push({
+        seq: seq++,
+        event_type: eventType,
+        seat: toInt_(r[3]),
+        ts: toInt_(r[5])
+      });
+    }
+    // POT_CORRECTION
+    else if (eventType === 'POT_CORRECTION') {
+      events.push({
+        seq: seq++,
+        event_type: 'POT_CORRECTION',
+        amount: toInt_(r[4]) || 0,
+        ts: toInt_(r[5])
+      });
+    }
+  });
+
+  return { events, board_json: boardCards };
+}
+
+/**
+ * hand_id 생성 (timestamp 기반)
+ */
+function generateHandId_(timestamp) {
+  const d = new Date(timestamp);
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyyMMdd'_'HHmmssSSS");
+}
+
+/**
+ * v2.0.1: payload → Hand 시트 저장
+ * @param {Object} payload - Record 모드 payload
+ * @return {Object} {ok, hand_id, hand_no, idempotent}
+ */
+function _saveHandToHandSheet_(payload) {
+  const rosterSS = rosterSS_();
+  const handSheet = rosterSS.getSheetByName('Hand');
+  if (!handSheet) throw new Error('Hand sheet not found');
+
+  // 멱등성: payload timestamp 기반 (1초 오차 허용)
+  const payloadTime = Date.parse(payload.started_at) || Date.now();
+  const allRows = handSheet.getDataRange().getValues();
+
+  // HAND 행에서 timestamp 확인 (col 3, 0-based index 3)
+  for (let i = 1; i < allRows.length; i++) {
+    const row = allRows[i];
+    if (row[1] === 'HAND') {
+      const rowTimestamp = row[3]; // HAND 행 col D (timestamp)
+      const rowTime = typeof rowTimestamp === 'number' ? rowTimestamp : Date.parse(rowTimestamp);
+      if (Math.abs(rowTime - payloadTime) < 1000) {
+        return {ok: true, hand_id: '', hand_no: String(row[2] || ''), idempotent: true};
+      }
+    }
+  }
+
+  const lastRow = handSheet.getLastRow();
+  let rowNum = lastRow + 1;
+
+  // 1) GAME 행
+  const gameRow = new Array(18).fill('');
+  gameRow[0] = rowNum++;
+  gameRow[1] = 'GAME';
+  gameRow[2] = 'GGProd Hand Logger';
+  gameRow[3] = 'Virtual Table';
+  gameRow[4] = Utilities.formatDate(new Date(payloadTime), 'Asia/Seoul', 'yyyy-MM-dd');
+  handSheet.appendRow(gameRow);
+
+  // 2) PAYOUTS 행
+  const payoutsRow = new Array(18).fill('');
+  payoutsRow[0] = rowNum++;
+  payoutsRow[1] = 'PAYOUTS';
+  handSheet.appendRow(payoutsRow);
+
+  // 3) HAND 행
+  const handNo = payload.hand_no || 'AUTO';
+  const handRow = new Array(18).fill('');
+  handRow[0] = rowNum++;
+  handRow[1] = 'HAND';
+  handRow[2] = handNo;
+  handRow[3] = payloadTime;
+  handRow[4] = 'HOLDEM';
+  handRow[5] = 'NO_ANTE'; // Record 모드는 NO_ANTE 고정
+  handRow[6] = 0; // bb (Record 미입력)
+  handRow[7] = 0; // date (unused)
+  handRow[8] = 0; // sb
+  handRow[9] = 0; // bb (NO_ANTE 위치)
+  handRow[10] = 0; // bb_ante
+  handRow[11] = toInt_(payload.btn_seat);
+  handRow[12] = 0; // sb_seat (Record 미입력)
+  handRow[13] = 0; // bb_seat
+  handRow[14] = 0; // unused
+  handRow[15] = 0; // unused
+  handRow[16] = 1; // unused
+  handRow[17] = String(payload.table_id || '');
+  handSheet.appendRow(handRow);
+
+  // 4) PLAYER 행들
+  const stackSnapshot = payload.stack_snapshot || {};
+  const holes = payload.holes || {};
+  Object.keys(stackSnapshot).sort((a, b) => toInt_(a) - toInt_(b)).forEach(seat => {
+    const playerRow = new Array(18).fill('');
+    playerRow[0] = rowNum++;
+    playerRow[1] = 'PLAYER';
+    playerRow[2] = getSeatName_(payload.table_id, seat);
+    playerRow[3] = toInt_(seat);
+    playerRow[4] = 0; // unused
+    playerRow[5] = toInt_(stackSnapshot[seat]);
+    playerRow[6] = toInt_(stackSnapshot[seat]);
+    const holeCards = holes[seat];
+    if (holeCards && holeCards[0] && holeCards[1]) {
+      playerRow[7] = `${cardCode_(holeCards[0])} ${cardCode_(holeCards[1])}`;
+    }
+    handSheet.appendRow(playerRow);
+  });
+
+  // 5) EVENT 행들
+  const board = payload.board || {};
+  const boardCards = [board.f1, board.f2, board.f3, board.turn, board.river].filter(c => c && c.trim());
+
+  // POT_CORRECTION (pre_pot이 있으면)
+  if (payload.pre_pot && toInt_(payload.pre_pot) > 0) {
+    const potRow = new Array(18).fill('');
+    potRow[0] = rowNum++;
+    potRow[1] = 'EVENT';
+    potRow[2] = 'POT CORRECTION';
+    potRow[3] = '';
+    potRow[4] = toInt_(payload.pre_pot);
+    potRow[5] = 0;
+    handSheet.appendRow(potRow);
+  }
+
+  // BOARD 카드들
+  boardCards.forEach(card => {
+    const boardRow = new Array(18).fill('');
+    boardRow[0] = rowNum++;
+    boardRow[1] = 'EVENT';
+    boardRow[2] = 'BOARD';
+    boardRow[3] = 1;
+    boardRow[4] = cardCode_(card);
+    boardRow[5] = 0;
+    handSheet.appendRow(boardRow);
+  });
+
+  // 액션들
+  const acts = payload.actions || [];
+  acts.forEach(a => {
+    const eventRow = new Array(18).fill('');
+    eventRow[0] = rowNum++;
+    eventRow[1] = 'EVENT';
+    eventRow[2] = String(a.action).toUpperCase();
+    eventRow[3] = toInt_(a.seat);
+    eventRow[4] = toInt_(a.amount_input) || '';
+    eventRow[5] = 0;
+    handSheet.appendRow(eventRow);
+  });
+
+  // 6) 빈 행 (핸드 구분자)
+  handSheet.appendRow(new Array(18).fill(''));
+
+  return {ok: true, hand_id: '', hand_no: handNo, idempotent: false};
+}
+
+/**
+ * v2.0.1: Hand 시트에서 핸드 상세 조회 (행 타입별 파싱)
+ * @param {string} handNo - HAND 행의 hand_no
+ * @return {Object} {head, acts, error}
+ */
+function getHandDetailFromHandSheet_(handNo) {
+  try {
+    const rosterSS = rosterSS_();
+    const handSheet = rosterSS.getSheetByName('Hand');
+    if (!handSheet) return {head: null, acts: [], error: 'Hand sheet not found'};
+
+    const allRows = handSheet.getDataRange().getValues();
+
+    // HAND 행 찾기
+    let handRowIdx = -1;
+    let handRow = null;
+    for (let i = 1; i < allRows.length; i++) {
+      const row = allRows[i];
+      if (row[1] === 'HAND' && String(row[2]) === String(handNo)) {
+        handRowIdx = i;
+        handRow = row;
+        break;
+      }
+    }
+
+    if (!handRow) return {head: null, acts: [], error: 'hand not found'};
+
+    // 같은 블록의 PLAYER/EVENT 행 수집 (다음 GAME 또는 빈 행까지)
+    const playerRows = [];
+    const eventRows = [];
+    for (let i = handRowIdx + 1; i < allRows.length; i++) {
+      const row = allRows[i];
+      const rowType = row[1];
+      if (rowType === 'GAME' || (row.every(c => !c))) break; // 다음 블록 시작
+      if (rowType === 'PLAYER') playerRows.push(row);
+      else if (rowType === 'EVENT') eventRows.push(row);
+    }
+
+    // head 생성
+    const stacksJson = {};
+    const holesJson = {};
+    playerRows.forEach(r => {
+      const seat = String(r[3]);
+      stacksJson[seat] = toInt_(r[5]);
+      const holeStr = String(r[7] || '').trim();
+      if (holeStr) {
+        const cards = holeStr.split(/\s+/);
+        if (cards.length >= 2) holesJson[seat] = [cards[0], cards[1]];
+      }
+    });
+
+    const boardCards = [];
+    eventRows.forEach(r => {
+      if (r[2] === 'BOARD') {
+        const card = String(r[4] || '').trim();
+        if (card) boardCards.push(card);
+      }
+    });
+
+    const head = {
+      hand_id: '', // 행 타입별 저장에서는 hand_id 없음
+      table_id: String(handRow[17] || ''),
+      btn_seat: String(handRow[11] || ''),
+      hand_no: String(handRow[2] || ''),
+      start_street: 'PREFLOP',
+      started_at: new Date(handRow[3]).toISOString(),
+      ended_at: new Date(handRow[3]).toISOString(),
+      board: {
+        f1: boardCards[0] || '',
+        f2: boardCards[1] || '',
+        f3: boardCards[2] || '',
+        turn: boardCards[3] || '',
+        river: boardCards[4] || ''
+      },
+      pre_pot: 0,
+      winner_seat: '',
+      pot_final: '',
+      stacks_json: JSON.stringify(stacksJson),
+      holes_json: JSON.stringify(holesJson)
+    };
+
+    // acts 생성
+    const acts = [];
+    let seq = 1;
+    eventRows.forEach(r => {
+      const eventType = r[2];
+      if (eventType === 'BOARD' || eventType === 'POT CORRECTION') return;
+      acts.push({
+        seq: seq++,
+        street: 'PREFLOP',
+        seat: String(r[3] || ''),
+        action: eventType,
+        amount_input: toInt_(r[4]) || 0,
+        to_call_after: 0,
+        contrib_after_seat: 0,
+        pot_after: 0,
+        note: ''
+      });
+    });
+
+    return {head, acts, error: ''};
+  } catch (e) {
+    return {head: null, acts: [], error: String(e.message || e)};
+  }
+}
+
+/**
+ * Helper: getSeatName (table_id 기반)
+ */
+function getSeatName_(tableId, seat) {
+  const roster = readRoster_().roster[tableId] || [];
+  const player = roster.find(p => String(p.seat) === String(seat));
+  return player ? player.player : `Seat ${seat}`;
+}

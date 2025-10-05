@@ -2,9 +2,166 @@
 
 ## 📌 프로젝트 개요
 - **목표**: 포커 핸드 실시간 기록 및 외부 시트 연동 시스템 유지보수
-- **현재 버전**: v1.1.1 (2025-10-02)
-- **현재 상태**: ✅ 문서화 완료, 🔍 검증 대기 중
-- **주요 컴포넌트**: Google Apps Script (Code.gs, 562줄) + Web App (index.html, 656줄)
+- **현재 버전**: v2.0.1 (2025-10-06) ✅ **구현 완료 (검증 대기)**
+- **현재 상태**: ✅ Hand 시트 **행 타입별 저장** 완료, **다음 세션 검증 예정**
+- **주요 컴포넌트**: Google Apps Script (Code.gs) + Web App (index.html)
+- **다음 작업**: [README.md 테스트 가이드](../README.md#-%EB%8B%A4%EC%9D%8C-%EC%84%B8%EC%85%98-%EA%B2%80%EC%A6%9D-%EA%B0%80%EC%9D%B4%EB%93%9C) 참조
+
+---
+
+## 🚨 **v2.0.0 대형 패치**
+
+### 📋 패치 개요
+**목표**: 데이터 아키텍처 단일화 및 Hand 시트 설계
+**작업 기간**: 2025-10-06
+**진행 상태**: 📝 문서 업데이트 완료 → 💻 코드 구현 대기
+
+### 🔄 주요 변경사항
+
+#### 1. 스프레드시트 구조 단일화
+**Before (v1.x)**:
+```
+APP_SPREADSHEET (19e7eDjoZRFZooghZJF3XmOZzZcgmqsp9mFAfjvJWhj4)
+├── HANDS 시트
+├── ACTIONS 시트
+├── CONFIG 시트
+└── LOG 시트
+
+ROSTER_SPREADSHEET (1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U)
+└── Type 시트
+```
+
+**After (v2.0)**:
+```
+ROSTER_SPREADSHEET (1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U)
+├── Type 시트 (기존 유지)
+└── Hand 시트 (신규)
+```
+
+**폐기 대상**:
+- ❌ APP_SPREADSHEET 전체 (시트 ID: 19e7eDjoZRFZooghZJF3XmOZzZcgmqsp9mFAfjvJWhj4)
+- ❌ HANDS 시트 (6개 시트 → 1개 시트로 통합)
+- ❌ ACTIONS 시트 (JSON 필드로 통합)
+- ❌ CONFIG 시트 (불필요)
+- ❌ LOG 시트 (불필요)
+
+#### 2. Hand 시트 설계 (⚠️ Option A - 행 타입별 저장 방식으로 최종 변경)
+
+**참조 데이터**: [csv/Virtual_Table_Data - Hand.csv](../csv/Virtual_Table_Data - Hand.csv) (2,866 lines, 5가지 row type)
+
+**스키마 설계 근거**:
+- CSV 파일 완전 분석 완료 ([CSV_ANALYSIS_Hand.md](CSV_ANALYSIS_Hand.md))
+- Hand block 구조: GAME → PAYOUTS → HAND → PLAYER(n) → EVENT(m)
+- Option A (Raw CSV): 5가지 row type 유지 → 복잡도 높음
+- Option B (Normalized): HANDS/ACTIONS 분리 → 폐기 방침 위배
+- **Option C (JSON 통합)**: 1 row per hand + JSON fields ✅ **선택**
+
+**Hand 시트 컬럼 (19개) - v2.0.1**:
+| # | 컬럼명 | 타입 | 필수 | 설명 | CSV 매핑 |
+|---|--------|------|------|------|----------|
+| 1 | hand_id | String | ✅ | 고유 핸드 ID | 자동 생성 |
+| 2 | hand_no | Number | ✅ | 핸드 번호 | HAND[2] |
+| 3 | timestamp | Number | ✅ | Unix 타임스탬프 (ms) | HAND[3] * 1000 |
+| 4 | table_id | String | ✅ | 테이블 ID | HAND[17] |
+| 5 | game_type | String | ✅ | HOLDEM/OMAHA | HAND[4] |
+| 6 | stakes_type | String | ✅ | BB_ANTE/NO_ANTE | HAND[5] |
+| 7 | bb | Number | ✅ | Big Blind | 조건부 (HAND[6] or [9]) |
+| 8 | sb | Number | ✅ | Small Blind | HAND[8] |
+| 9 | bb_ante | Number | ❌ | BB Ante | 조건부 (HAND[9] or [10]) |
+| 10 | btn_seat | Number | ✅ | BTN 좌석 | HAND[11] |
+| 11 | sb_seat | Number | ✅ | SB 좌석 | HAND[12] |
+| 12 | bb_seat | Number | ✅ | BB 좌석 | HAND[13] |
+| 13 | board_json | JSON | ❌ | 보드 카드 배열 | EVENT(BOARD) → ["Kh", "10d"] |
+| 14 | players_json | JSON | ✅ | 플레이어 정보 배열 | PLAYER rows 통합 |
+| 15 | events_json | JSON | ✅ | 이벤트 정보 배열 | EVENT rows 통합 |
+| 16 | final_pot | Number | ❌ | 최종 팟 | initial_pot + contributed_pot |
+| 17 | game_name | String | ❌ | 게임 이름 | GAME[2] |
+| 18 | **initial_pot** | Number | ❌ | **초기 팟 (POT_CORRECTION)** | POT_CORRECTION 합계 |
+| 19 | **contributed_pot** | Number | ❌ | **플레이어 베팅 합계** | BET/RAISE/CALL/ALL-IN 합계 |
+
+**💡 final_pot 계산 공식:**
+```javascript
+final_pot = initial_pot + contributed_pot
+```
+
+**⚠️ stakes_type 조건부 파싱:**
+- BB_ANTE: CSV[6]=bb, CSV[8]=sb, CSV[9]=bb_ante
+- NO_ANTE: CSV[8]=sb, CSV[9]=bb, CSV[10]=bb_ante
+
+**players_json 구조 (v2.0.1)**:
+```json
+[
+  {
+    "seat": 7,
+    "name": "Katie Hills",
+    "start_stack": 50000,
+    "end_stack": 50000,
+    "hole_cards": ["10h", "9d"],
+    "position": "BTN",
+    "is_hero": true,
+    "marker": "BR"
+  }
+]
+```
+
+**🔄 v2.0.1 변경:**
+- `hole_cards`: 문자열 → **배열**
+- 홀카드 없을 시: **null**
+
+**events_json 구조 (v2.0.1)**:
+```json
+[
+  {"seq": 1, "event_type": "POT_CORRECTION", "amount": 5300},
+  {"seq": 2, "event_type": "BOARD", "card": "8h"},
+  {
+    "seq": 3,
+    "event_type": "RAISE",
+    "seat": 9,
+    "amount": 12200,
+    "total_bet": 15000,
+    "raise_type": "TO"
+  },
+  {"seq": 4, "event_type": "ALL-IN", "seat": 3, "amount": 0}
+]
+```
+
+**🔄 v2.0.1 변경:**
+- **RAISE_TO**: `total_bet`, `raise_type` 필드 추가
+- **amount**: 증가 금액
+
+#### 3. VIRTUAL 시트 갱신 정책 변경
+
+**Before (v1.x)**:
+- Record 모드 "데이터 전송" 버튼 → Hand 시트 + VIRTUAL 시트 자동 갱신
+- Review 모드: VIRTUAL 갱신 불가
+
+**After (v2.0)**:
+- Record 모드 "데이터 전송" 버튼 → Hand 시트만 저장 (VIRTUAL 갱신 제거)
+- Review 모드: "🔄 VIRTUAL 시트에 갱신" 버튼 추가 (수동 갱신 전용)
+
+**사유**:
+- Record 작업 중 외부 시트 오류로 인한 커밋 실패 방지
+- Review 모드에서 선택적 갱신으로 사용자 통제권 강화
+
+#### 4. CSV 변환 로직
+
+**입력**: `csv/Virtual_Table_Data - Hand.csv` (2,866 lines)
+**출력**: Hand 시트 (예상 ~500 rows, 1 hand = 1 row)
+
+**변환 단계**:
+1. **Hand Block 파싱**: 빈 줄 기준 블록 분리
+2. **Row Type 식별**: GAME/PAYOUTS/HAND/PLAYER/EVENT
+3. **JSON 생성**:
+   - PLAYER rows → `players_json` 배열
+   - EVENT rows → `events_json` 배열
+   - BOARD 이벤트 → `board_json` 배열
+4. **최종 팟 계산**: EVENT rows에서 BET/RAISE/CALL 합산
+5. **Hand 시트 행 생성**: 16개 컬럼 매핑
+
+**데이터 품질 이슈**:
+- "RAIES" 오타 → "RAISE"로 자동 수정
+- 홀카드 누락 (빈 문자열) → null 처리
+- POT CORRECTION 이벤트 → 별도 event_type 유지
 
 ---
 
@@ -42,7 +199,256 @@
 
 ---
 
-## 🔍 다음 작업: HANDS 시트 업데이트 검증
+## ✅ **v2.0.1 구현 완료** (2025-10-06)
+
+### Phase 1: Hand 시트 생성 및 헤더 설정 ✅
+**소요 시간**: 30분
+**완료일**: 2025-10-06
+
+**완료 내용**:
+1. ✅ `ensureSheets_()` 함수 수정 ([code.gs:72-80](../code.gs#L72-L80))
+2. ✅ 19-column 헤더 설정 (initial_pot, contributed_pot 추가)
+3. ✅ APP_SPREADSHEET 시트 생성 로직 유지 (v1.x 하위 호환)
+
+### Phase 2: CSV 파싱 함수 구현 ✅
+**소요 시간**: 2시간
+**완료일**: 2025-10-06
+
+**완료 내용**:
+1. ✅ `convertBlockToHandRow_(block)` - 핸드 블록 → 19-column 행 변환
+2. ✅ `parseHandRow_(row)` - HAND 행 파싱 (stakes_type 조건부)
+3. ✅ `parsePlayerRows_(rows)` - PLAYER 행들 → players_json
+4. ✅ `parseEventRows_(rows)` - EVENT 행들 → events_json + board_json
+5. ✅ `generateHandId_(timestamp)` - hand_id 생성
+6. ✅ RAISE_TO 처리 로직 (total_bet, raise_type 필드)
+7. ✅ hole_cards 배열 변환 (문자열 → ["10h","9d"])
+
+**파일**: [code.gs:587-773](../code.gs#L587-L773)
+
+**작업 내용**:
+1. **신규 함수 추가** (code.gs):
+   ```javascript
+   /**
+    * CSV Hand Block 파싱
+    * @param {string[][]} csvRows - CSV 전체 행 배열
+    * @return {Object[]} Hand 시트 행 배열
+    */
+   function parseHandBlocksFromCsv_(csvRows) {
+     // 1. 빈 줄 기준 블록 분리
+     // 2. 각 블록 내 GAME/PAYOUTS/HAND/PLAYER/EVENT 파싱
+     // 3. JSON 생성 (players_json, events_json, board_json)
+     // 4. Hand 시트 행 객체 생성
+   }
+
+   /**
+    * CSV 파일 읽기 및 Hand 시트 일괄 저장
+    * 관리자 전용 함수 (최초 1회 실행)
+    */
+   function importCsvToHandSheet() {
+     // CSV 읽기 → parseHandBlocksFromCsv_() → Hand 시트 일괄 저장
+   }
+   ```
+
+2. **검증**:
+   - [ ] CSV 2,866 lines → ~500 hand rows 변환
+   - [ ] players_json/events_json/board_json 형식 확인
+   - [ ] "RAIES" → "RAISE" 자동 수정 확인
+   - [ ] 홀카드 누락 null 처리 확인
+
+### Phase 3: Record 모드 저장 로직 변경 ✅
+**소요 시간**: 1.5시간
+**완료일**: 2025-10-06
+
+**완료 내용**:
+1. ✅ `_saveHandToHandSheet_(payload)` - payload → Hand 시트 저장
+2. ✅ `getHandDetailFromHandSheet_(handId)` - Hand 시트 조회
+3. ✅ `getSeatName_(tableId, seat)` - Roster 기반 이름 조회
+4. ✅ 멱등성 보장 (timestamp 기반, 1초 오차 허용)
+5. ✅ VIRTUAL 시트 연동 유지 (기존 로직 재사용)
+
+**파일**: [code.gs:780-974](../code.gs#L780-L974)
+
+**주요 변경**:
+- `saveHand()` → `_saveHandToHandSheet_()` 호출
+- `saveHandWithExternal()` → Hand 시트 + VIRTUAL 갱신
+- v1.x 호환: stacks_json, holes_json 재구성
+
+**작업 내용**:
+1. **code.gs 수정**:
+   - `saveHandWithExternal()` 함수 → `saveHand()` 함수로 단순화
+   - VIRTUAL 갱신 로직 제거 (Review 모드 전용으로 이동)
+   - Hand 시트 저장 로직 추가 (16개 컬럼 매핑)
+   - 기존 HANDS/ACTIONS 시트 저장 로직 제거
+
+2. **index.html 수정**:
+   - `commitHand()` 함수에서 `saveHandWithExternal()` → `saveHand()` 호출 변경
+   - External Sheet ID 입력 필드 제거 (Record 모드)
+
+3. **검증**:
+   - [ ] Record 모드에서 핸드 커밋 성공 (Hand 시트 1행 추가)
+   - [ ] players_json: 홀카드/스택 정보 포함
+   - [ ] events_json: 액션 순서 및 금액 정확도
+   - [ ] board_json: 보드 카드 배열 정확도
+   - [ ] VIRTUAL 갱신 시도 없음 확인
+
+### Phase 4-6: 보류 (현재 버전 범위 밖)
+**사유**: v2.0.1 핵심 기능 완료, 추가 기능은 검증 후 진행
+
+**작업 내용**:
+1. **code.gs 수정**:
+   ```javascript
+   /**
+    * Review 모드 전용: 핸드를 VIRTUAL 시트에 갱신
+    * @param {string} handId - 핸드 ID
+    * @param {Object} ext - { sheetId, bb }
+    * @return {Object} { updated, row, reason }
+    */
+   function updateHandToVirtual(handId, ext) {
+     // Hand 시트에서 handId 조회
+     // getHandDetail() 형식으로 변환
+     // updateExternalVirtual_() 호출
+   }
+
+   /**
+    * Hand 시트에서 핸드 상세 조회
+    * @param {string} handId
+    * @return {Object} { head, acts }
+    */
+   function getHandDetailFromHandSheet(handId) {
+     // Hand 시트 조회 → players_json/events_json 파싱
+     // 기존 getHandDetail() 반환 형식과 호환
+   }
+   ```
+
+2. **index.html 수정**:
+   - `renderDetailContent()` 함수에 "🔄 VIRTUAL 시트에 갱신" 버튼 추가
+   - `updateHandToVirtual()` 클라이언트 함수 추가
+   - localStorage에서 extSheetId/bb 복원 로직 추가
+
+3. **검증**:
+   - [ ] Review 모드에서 핸드 선택 → "🔄 VIRTUAL 시트에 갱신" 버튼 표시
+   - [ ] extSheetId 미입력 시 프롬프트 표시
+   - [ ] VIRTUAL 시트 C/E/F/G/H/J 열 갱신 확인
+   - [ ] 갱신 성공/실패 메시지 표시
+
+---
+
+### Phase 5: Review 모드 조회 로직 변경
+**예상 시간**: 1시간
+**목표**: Review 모드 핸드 목록/상세 조회를 Hand 시트 기반으로 변경
+
+**작업 내용**:
+1. **code.gs 수정**:
+   - `queryHands()` 함수: HANDS 시트 → Hand 시트 조회로 변경
+   - `getHandDetail()` 함수: `getHandDetailFromHandSheet()` 호출로 변경
+   - players_json/events_json 파싱하여 기존 형식으로 변환
+
+2. **검증**:
+   - [ ] Review 모드 핸드 목록 정상 표시 (최신순 정렬)
+   - [ ] 핸드 선택 시 상세 정보 정상 표시
+   - [ ] 보드 카드/홀카드/액션 히스토리 정확도 확인
+   - [ ] 무한 스크롤 동작 확인
+
+---
+
+### Phase 6: APP_SPREADSHEET 참조 완전 제거
+**예상 시간**: 1시간
+**목표**: code.gs/index.html에서 APP_SPREADSHEET 모든 참조 제거
+
+**작업 내용**:
+1. **code.gs 수정**:
+   - `APP_SPREADSHEET_ID` 상수 제거
+   - `ensureSheets_()` 함수에서 HANDS/ACTIONS/CONFIG/LOG 시트 생성 로직 제거
+   - `log_()` 함수 제거 (불필요)
+
+2. **코드 검색 및 제거**:
+   - "APP_SPREADSHEET" 문자열 검색
+   - "HANDS" 시트 참조 검색
+   - "ACTIONS" 시트 참조 검색
+   - "CONFIG" 시트 참조 검색
+   - "LOG" 시트 참조 검색
+
+3. **검증**:
+   - [ ] code.gs에서 APP_SPREADSHEET 참조 0건
+   - [ ] index.html에서 APP_SPREADSHEET 참조 0건
+   - [ ] 실행 시 오류 없음 확인
+
+---
+
+### Phase 7: 통합 테스트
+**예상 시간**: 2시간
+**목표**: v2.0.0 전체 기능 검증
+
+**Record 모드 플로우**:
+1. [ ] 테이블 선택 (Type 시트 조회)
+2. [ ] 좌석/스택 설정
+3. [ ] 보드 카드 선택
+4. [ ] 홀카드 입력
+5. [ ] 액션 입력 (PREFLOP → RIVER)
+6. [ ] "데이터 전송" 버튼 클릭
+7. [ ] Hand 시트에 1행 추가 확인 (16개 컬럼)
+8. [ ] players_json/events_json/board_json 정확도 검증
+
+**Review 모드 플로우**:
+1. [ ] 핸드 목록 조회 (Hand 시트 기반)
+2. [ ] 핸드 선택 → 상세 표시
+3. [ ] 2-Panel 레이아웃 동작 확인
+4. [ ] "🔄 VIRTUAL 시트에 갱신" 버튼 클릭
+5. [ ] extSheetId 입력 (프롬프트)
+6. [ ] VIRTUAL 시트 C/E/F/G/H/J 열 갱신 확인
+7. [ ] 갱신 성공 메시지 확인
+
+**크로스 검증**:
+- [ ] Record → Review 전환 (데이터 즉시 반영)
+- [ ] Review → Record 전환 (상태 유지)
+- [ ] 새로고침 후 양쪽 모드 정상
+
+**데이터 품질 검증**:
+- [ ] 중복 hand_id 방지 (멱등성)
+- [ ] timestamp 정확도 (Unix ms)
+- [ ] JSON 파싱 오류 없음
+- [ ] 보드 미완성 핸드 허용 (Preflop only)
+
+---
+
+### Phase 8: 문서 업데이트 및 배포
+**예상 시간**: 1시간
+**목표**: v2.0.0 변경사항 문서화 및 배포
+
+**작업 내용**:
+1. **문서 업데이트**:
+   - [x] PRD_HandLogger.md: v2.0.0 섹션 추가 ✅
+   - [x] LLD_HandLogger.md: 아키텍처 다이어그램 업데이트 ✅
+   - [x] PLAN_HandLogger.md: v2.0.0 구현 계획 추가 ✅
+   - [x] CSV_ANALYSIS_Hand.md: CSV 분석 문서 작성 ✅
+
+2. **Git 커밋**:
+   - [ ] 변경사항 커밋 (v2.0.0 - Hand 시트 통합)
+   - [ ] 커밋 메시지 작성 (PRD/LLD/PLAN 업데이트 포함)
+
+3. **배포**:
+   - [ ] Apps Script 배포
+   - [ ] 프로덕션 테스트 (샘플 핸드 5개 기록)
+
+---
+
+### 예상 총 소요 시간
+```
+Phase 1: 30분  (Hand 시트 생성)
+Phase 2: 2시간  (CSV 파싱)
+Phase 3: 1.5시간 (Record 저장 변경)
+Phase 4: 1.5시간 (Review VIRTUAL 갱신)
+Phase 5: 1시간  (Review 조회 변경)
+Phase 6: 1시간  (APP_SPREADSHEET 제거)
+Phase 7: 2시간  (통합 테스트)
+Phase 8: 1시간  (문서/배포)
+─────────────
+총합: 10.5시간
+```
+
+---
+
+## 🔍 다음 작업: v2.0.0 코드 구현 (Option C 확인 후)
 
 ### 📋 작업 개요
 **목표**: 현재 HandLogger가 저장하는 HANDS/ACTIONS 데이터가 올바르게 동작하는지 검증
@@ -189,26 +595,188 @@
 ## 🐛 발견된 이슈 (Issue Tracker)
 
 ### Critical
-_아직 없음_
+_없음_
 
-### High
-_아직 없음_
+### ✅ Resolved (v1.2.0-1.2.1)
 
-### Medium
-_아직 없음_
+**1. Review 모드 최신순 정렬 미작동** ✅ 수정 완료 (v1.2.0)
+- **발견일**: 2025-10-06
+- **수정일**: 2025-10-06
+- **위치**: [code.gs:274-280](code.gs#L274-L280) `queryHands()`
+- **증상**: 핸드 목록이 최신순(내림차순)으로 표시되지 않음
+- **원인**: Date/String 혼합 타입 정렬 버그 (`localeCompare` 미작동)
+- **해결**:
+  ```javascript
+  // Before
+  rows.sort((a,b)=>String(b[idxStart]).localeCompare(String(a[idxStart])));
 
-### Low
-_아직 없음_
+  // After
+  rows.sort((a,b)=>{
+    const aVal=a[idxStart], bVal=b[idxStart];
+    const aTime=(aVal instanceof Date)?aVal.getTime():(new Date(aVal).getTime()||0);
+    const bTime=(bVal instanceof Date)?bVal.getTime():(new Date(bVal).getTime()||0);
+    return bTime-aTime; // 최신순
+  });
+  ```
+
+**2. 플레이어 이름 "S.6" 표시 버그** ✅ 수정 완료 (v1.2.1)
+- **발견일**: 2025-10-06
+- **수정일**: 2025-10-06
+- **위치**: [index.html:691-695](index.html#L691-L695) `getSeatNameByTable()`
+- **증상**: Review 모드에서 "Alice" 대신 "S.6" 표시
+- **원인**: `getSeatName()`이 `S.curTable` 사용 (Review 모드에서 undefined)
+- **해결**: `getSeatNameByTable(tableId, seat)` 함수 추가
+
+**3. localStorage 키 불일치** ✅ 수정 완료 (v1.2.1)
+- **증상**: BB 값이 0BB로 표시
+- **원인**: 저장 `phl_bbSize` / 조회 `bb` (키 불일치)
+- **해결**: 모든 조회를 `phl_bbSize`로 통일
+
+**4. 홀카드 색상 하드코딩 버그** ✅ 수정 완료 (v1.2.1)
+- **증상**: 홀카드가 항상 검정/빨강으로 표시
+- **원인**: `cb-s`, `cb-h` 하드코딩 (실제 수트 무시)
+- **해결**: `renderCardBadge()` 통합 함수로 실제 수트 색상 적용
+
+### Open
+_없음_
 
 ---
 
-## 🎯 향후 개발 계획 (v1.2.0 이후)
+## 🎯 향후 개발 계획
 
-### 1. 보드↔홀카드 양방향 중복 차단
+### v1.3.0 - Review 모드 VIRTUAL 수동 갱신 (다음 버전)
 **우선순위**: HIGH
-**예상 시간**: 1시간
+**예상 시간**: 2시간
+**목표일**: 2025-10-07
 
-### 1. 보드↔홀카드 양방향 중복 차단
+#### 배경
+- **현재 상황**: Record 모드에서만 VIRTUAL 자동 갱신 가능
+- **요구사항**: Review 모드에서 특정 핸드를 선택하여 VIRTUAL 시트에 수동 갱신
+- **활용 사례**:
+  - 과거 핸드 재갱신
+  - Record 모드에서 누락된 핸드 수동 처리
+  - VIRTUAL 시트 row 매칭 실패 시 재시도
+
+#### 작업 내용
+
+##### 1. code.gs 수정 (신규 함수 추가)
+```javascript
+// 위치: code.gs 357줄 이후 추가
+function updateHandToVirtual(handId, ext) {
+  ensureSheets_();
+  if (!handId || String(handId).trim() === '') {
+    throw new Error('handId is required');
+  }
+  if (!ext || !ext.sheetId || String(ext.sheetId).trim() === '') {
+    throw new Error('ext.sheetId is required');
+  }
+
+  return withScriptLock_(() => {
+    log_('UPDATE_VIRTUAL_BEGIN', `hand_id=${handId}`, '');
+
+    const detail = getHandDetail(handId);
+    if (detail.error) {
+      log_('UPDATE_VIRTUAL_FAIL', `hand_id=${handId} error=${detail.error}`, '');
+      throw new Error(`핸드 조회 실패: ${detail.error}`);
+    }
+    if (!detail.head) {
+      log_('UPDATE_VIRTUAL_FAIL', `hand_id=${handId} reason=no-head`, '');
+      throw new Error('핸드 데이터가 없습니다');
+    }
+
+    const result = updateExternalVirtual_(ext.sheetId, detail, ext);
+
+    if (result.updated) {
+      log_('UPDATE_VIRTUAL_OK', `hand_id=${handId} row=${result.row}`, '');
+    } else {
+      log_('UPDATE_VIRTUAL_SKIP', `hand_id=${handId} reason=${result.reason}`, '');
+    }
+
+    return result;
+  });
+}
+```
+
+##### 2. index.html 수정
+
+**2.1 renderDetailContent() 함수 수정** (670-750줄 근처)
+```javascript
+// 푸터 하단에 버튼 추가
+function renderDetailContent(head, acts) {
+  // ... 기존 렌더링 코드 ...
+
+  const footerHTML = `
+    <div class="sectionDivider"></div>
+    <div class="potFooter">최종 팟: ${potDisplay.toLocaleString()}${bbStr}</div>
+
+    <div style="margin-top:16px;padding:12px;border-top:1px solid var(--line)">
+      <button onclick="updateHandToVirtual('${head.hand_id}')"
+              class="pill"
+              style="width:100%;padding:12px;font-size:1rem">
+        🔄 VIRTUAL 시트에 갱신
+      </button>
+      <div id="virtualUpdateStatus" class="small muted" style="margin-top:8px;text-align:center"></div>
+    </div>
+  `;
+
+  return headerHTML + boardHTML + playerHTML + actionsHTML + footerHTML;
+}
+```
+
+**2.2 updateHandToVirtual() 클라이언트 함수 추가** (750줄 이후)
+```javascript
+function updateHandToVirtual(handId) {
+  let extSheetId = localStorage.getItem('phl_extSheetId') || '';
+  const bb = toInt(localStorage.getItem('phl_bbSize') || '0');
+
+  // extSheetId 미입력 시 입력 프롬프트
+  if (!extSheetId) {
+    const input = prompt('VIRTUAL 시트 ID를 입력하세요:\n(Record 모드 상단의 External Sheet ID와 동일)', '');
+    if (!input || !input.trim()) {
+      alert('시트 ID가 입력되지 않아 취소되었습니다.');
+      return;
+    }
+    localStorage.setItem('phl_extSheetId', input.trim());
+    extSheetId = input.trim();
+  }
+
+  const statusEl = document.getElementById('virtualUpdateStatus');
+  if (!statusEl) return;
+
+  statusEl.textContent = '갱신 중...';
+  statusEl.style.color = 'var(--muted)';
+
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.updated) {
+        statusEl.textContent = `✅ 갱신 완료 (row ${res.row})`;
+        statusEl.style.color = '#22c55e';
+        setTimeout(() => { statusEl.textContent = ''; }, 5000);
+      } else {
+        statusEl.textContent = `⚠️ 갱신 실패: ${res.reason || '알 수 없는 오류'}`;
+        statusEl.style.color = '#ef4444';
+      }
+    })
+    .withFailureHandler(err => {
+      const msg = (err && (err.message || err.toString())) || 'unknown error';
+      statusEl.textContent = `❌ 오류: ${msg}`;
+      statusEl.style.color = '#ef4444';
+    })
+    .updateHandToVirtual(handId, { sheetId: extSheetId, bb });
+}
+```
+
+#### 검증 체크리스트
+- [ ] extSheetId 미입력 시 프롬프트 표시
+- [ ] localStorage에서 extSheetId 복원 동작
+- [ ] VIRTUAL 시트 갱신 성공 (row 번호 표시)
+- [ ] 갱신 실패 시 reason 메시지 표시
+- [ ] 오류 발생 시 에러 메시지 표시
+- [ ] Record 모드 기존 동작 영향 없음
+
+---
+
+### v1.4.0 - 보드↔홀카드 양방향 중복 차단
 **우선순위**: HIGH
 **예상 시간**: 1시간
 
@@ -851,13 +1419,97 @@ function switchTable(tableId) {
 
 ## 📅 릴리스 일정
 
-### v1.2.0 (2주 후)
-- [x] 보드↔홀카드 양방향 중복 차단
-- [x] ALLIN 자동 계산 개선
-- [x] 턴 순서 최적화
-- [x] 외부 시트 Time 포맷 확장
+### v1.2.0 (즉시 - Review 모드 최적화 - 재설계)
 
-### v1.3.0 (1개월 후)
+**⚠️ 핵심 원칙**: Record 모드 기존 기능 100% 보존 (공용 함수 수정 금지)
+
+#### Phase 0: 의존성 분석 (✅ 완료)
+- [x] Record 함수 호출 그래프 작성
+- [x] Review 함수 종속성 매핑
+- [x] 공용 함수 식별 (6개: cardCode, prettyCard, seatNameOnly, getSeatName, toInt, safeJson_)
+- [x] 문서 재작성 (PRD/LLD)
+
+#### Phase 1: CSS 레이아웃 (15분)
+- [ ] 2-Panel CSS 추가 (#panelReview flex-direction:row)
+- [ ] 목록/상세 영역 크기 설정 (40%/60%, max-height:75vh)
+- [ ] 선택 상태 CSS (.seatCard.selected)
+- [ ] **검증**: Record 모드 스타일 영향 없음 확인
+
+#### Phase 2: 서버 정렬 버그 수정 (30분)
+- [ ] code.gs queryHands() 정렬 로직 수정
+- [ ] Date/String 타입 혼합 처리
+- [ ] **검증**: Review 목록 최신순 정렬 확인
+
+#### Phase 3: Review 전용 함수 정리 (90분 → 수정)
+**3-1. 안전하게 삭제 (6개, 20분)**
+- [ ] suitClass_() 삭제 + CSS 직접 생성으로 대체
+- [ ] cardBadge_() 삭제 + 템플릿 리터럴 대체
+- [ ] boardBadges_() 삭제 + map().join() 대체
+- [ ] actClass_() 삭제 + CSS 직접 생성
+- [ ] formatActBadge_() 삭제 + 템플릿 리터럴 대체
+- [ ] section_() 삭제 + HTML 직접 생성
+- [ ] **검증**: Record 모드 전체 플로우 테스트
+
+**3-2. 개선 (4개, 40분)**
+- [ ] boardArrayAny_() → boardToArray_() 단순화
+- [ ] groupByStreet_() → groupByStreet (언더스코어 제거)
+- [ ] seatNameOnlyFmt() 호출 제거 → 직접 호출
+- [ ] renderDetailBlock_() → renderDetailContent() 단순화
+- [ ] **검증**: Review 상세 렌더링 확인
+
+**3-3. 신규 함수 추가 (5개, 30분)**
+- [ ] loadHandPage(page) - 페이징
+- [ ] appendHands(hands) - 목록 추가
+- [ ] handleListScroll() - 무한 스크롤
+- [ ] updateSelectedState() - 선택 상태
+- [ ] renderDetailContent() - 상세 렌더링
+- [ ] **검증**: 무한 스크롤 동작 확인
+
+#### Phase 4: 통합 검증 (30분)
+**Record 모드 전체 플로우**
+- [ ] 테이블 선택 → 좌석 선택
+- [ ] 보드 카드 선택 (prettyCard 의존)
+- [ ] 홀카드 오버레이 (prettyCard, getSeatName 의존)
+- [ ] 액션 입력 → 액션 피드 (seatNameOnly, getSeatName 의존)
+- [ ] 커밋 → 외부 시트 연동
+
+**Review 모드 전체 플로우**
+- [ ] 목록 로드 (무한 스크롤 10건)
+- [ ] 핸드 선택 → 상세 표시
+- [ ] 2-Panel 레이아웃 동작
+- [ ] 선택 상태 표시
+
+**크로스 검증**
+- [ ] Record → Review 전환
+- [ ] Review → Record 전환
+- [ ] 새로고침 후 양쪽 모드 정상
+
+#### 예상 시간
+```
+Phase 0: ✅ 완료
+Phase 1: 15분
+Phase 2: 30분
+Phase 3: 90분
+Phase 4: 30분
+─────────────
+총합: 165분 (2.75시간)
+```
+
+#### 롤백 계획
+```
+Phase 1 실패 → git restore index.html (CSS만)
+Phase 2 실패 → git restore code.gs
+Phase 3 실패 → git restore index.html + 이전 단계 재시도
+Phase 4 실패 → 전체 롤백 + 근본 원인 재분석
+```
+
+### v1.3.0 (2주 후)
+- [ ] 보드↔홀카드 양방향 중복 차단
+- [ ] ALLIN 자동 계산 개선
+- [ ] 턴 순서 최적화
+- [ ] 외부 시트 Time 포맷 확장
+
+### v1.4.0 (1개월 후)
 - [ ] 사이드팟 자동 계산
 - [ ] 핸드 히스토리 내보내기
 - [ ] 모바일 반응형 개선
