@@ -1,0 +1,178 @@
+handNumber,startRow,endRow,handUpdatedAt,handEdit,handEditTime,label,table,tableUpdatedAt,Cam,CamFile01name,CamFile01number,CamFile02name,CamFile02number,lastStreet,lastAction,workStatus,winners
+1,3,24,2025-08-31,TRUE,2025. 9. 4,,T01,2025-08-31,camAa+camBa,camAa,1,camBa,2,flop,"Fish Bets 10,000",진행중,
+1,25,36,2025-08-31,FALSE,,,T02,2025-08-31,camAa+camBa,camAa,3,camBa,4,river,Hero Checks,검토필요,
+20,37,51,2025-08-31,FALSE,,,T03,2025-08-31,camAa+camBa,camAa,5,camBa,6,flop,V Raises pot,진행중,
+21,52,64,2025-08-31,FALSE,,,T04,2025-08-31,camAa+camBa,camAa,7,camBa,8,preflop,Fish Checks,완료,
+22,65,77,2025-08-31,FALSE,,,,,camAa+camBa,camAa,9,camBa,10,flop,"Rock Raises 50,000",진행중,
+23,78,90,2025-08-31,FALSE,,,,,camAa+camBa,camAa,11,camBa,12,flop,Shark Checks,진행중,
+22,91,104,2025-08-31,FALSE,,,,,camAa+camBa,camAa,13,camBa,14,turn,"Shark All In 50,000",완료,
+24,105,126,2025-08-31,FALSE,,,,,camAa+camBa,camAa,15,camBa,16,flop,"Hero Bets 25,000",진행중,
+25,127,146,2025-08-31,FALSE,,,,,camAa+camBa,camAa,17,camBa,18,flop,Rock All In pot,진행중,
+1,147,159,2025-08-31,FALSE,,,,,camAa+camBa,camAa,19,camBa,20,river,V Calls pot,검토필요,
+1,160,171,2025-08-31,FALSE,,,,,camAa+camBa,camAa,21,camBa,22,river,Hero Checks,완료,
+26,172,183,2025-08-31,FALSE,,,,,camAa+camBa,camAa,23,camBa,24,river,Rock Folds,완료,
+27,184,208,2025-08-31,FALSE,,,,,camAa+camBa,camAa,25,camBa,26,flop,Hero All In pot,진행중,
+28,209,227,2025-08-31,FALSE,,,,,camAa+camBa,camAa,27,camBa,28,river,"Fish Raises 10,000",완료,
+29,228,237,2025-08-31,FALSE,,,,,camAa+camBa,camAa,29,camBa,30,river,Shark Checks,완료,
+30,238,257,2025-08-31,FALSE,,,,,camAa+camBa,camAa,31,camBa,32,preflop,Rock Folds,진행중,
+31,258,275,2025-08-31,FALSE,,,,,camAa+camBa,camAa,33,camBa,34,river,Fish Checks,완료,
+32,276,292,2025-08-31,FALSE,,,,,camAa+camBa,camAa,35,camBa,36,flop,Shark Checks,진행중,
+33,293,299,2025-08-31,FALSE,,,,,camAa+camBa,camAa,37,camBa,38,preflop,"Hero Bets 25,000",진행중,
+34,300,306,2025-08-31,FALSE,,,,,camAa+camBa,camAa,39,camBa,40,river,"Rock Raises 50,000",완료,
+35,307,316,2025-08-31,FALSE,,,,,camAa+camBa,camAa,41,camBa,42,flop,V Checks,진행중,
+36,317,328,2025-08-31,FALSE,,,,,camAa+camBa,camAa,43,camBa,44,turn,Hero Calls pot,진행중,
+37,329,342,2025-08-31,FALSE,,,,,camAa+camBa,camAa,45,camBa,46,turn,Rock Folds,진행중,
+38,343,354,2025-08-31,FALSE,,,,,camAa+camBa,camAa,47,camBa,48,river,Shark Checks,완료,
+39,355,372,2025-08-31,FALSE,,,,,camAa+camBa,camAa,49,camBa,50,preflop,"Shark Bets 100,000",완료,
+40,373,379,2025-08-31,FALSE,,,,,camAa+camBa,camAa,51,camBa,52,turn,Hero Folds,진행중,
+41,380,386,2025-08-31,FALSE,,,,,camAa+camBa,camAa,53,camBa,54,preflop,V Folds,진행중,
+42,387,393,2025-08-31,FALSE,,,,,camAa+camBa,camAa,55,camBa,56,river,"Shark All In 5,000",검토필요,
+43,394,406,2025-08-31,FALSE,,,,,camAa+camBa,camAa,57,camBa,58,preflop,"V All In 25,000",진행중,
+44,407,412,2025-08-31,FALSE,,,,,camAa+camBa,camAa,59,camBa,60,river,"Fish Raises 25,000",완료,
+45,413,420,2025-08-31,FALSE,,,,,camAa+camBa,camAa,61,camBa,62,preflop,Rock Folds,진행중,
+46,421,434,2025-08-31,FALSE,,,,,camAa+camBa,camAa,63,camBa,64,preflop,"V Calls 50,000",완료,
+47,,,,FALSE,,,,,camAa+camBa,camAa,65,camBa,66,river,Hero Checks,완료,
+48,,,,FALSE,,,,,camAa+camBa,camAa,67,camBa,68,flop,"Hero Calls 5,000",진행중,
+49,,,,FALSE,,,,,camAa+camBa,camAa,69,camBa,70,turn,Shark All In pot,진행중,
+50,,,,FALSE,,,,,camAa+camBa,camAa,71,camBa,72,flop,Fish Folds,진행중,
+51,,,,FALSE,,,,,camAa+camBa,camAa,73,camBa,74,turn,Shark Checks,진행중,
+52,,,,FALSE,,,,,camAa+camBa,camAa,75,camBa,76,river,"Shark Bets 10,000",완료,
+53,,,,FALSE,,,,,camAa+camBa,camAa,77,camBa,78,turn,V Raises pot,진행중,
+54,,,,FALSE,,,,,camAa+camBa,camAa,79,camBa,80,river,"Fish All In 5,000",완료,
+55,,,,FALSE,,,,,camAa+camBa,camAa,81,camBa,82,turn,"V Bets 50,000",완료,
+56,,,,FALSE,,,,,camAa+camBa,camAa,83,camBa,84,river,Rock All In pot,완료,
+57,,,,FALSE,,,,,camAa+camBa,camAa,85,camBa,86,river,"Fish Bets 10,000",완료,
+58,,,,FALSE,,,,,camAa+camBa,camAa,87,camBa,88,turn,"Rock Bets 5,000",완료,
+59,,,,FALSE,,,,,camAa+camBa,camAa,89,camBa,90,river,V Checks,완료,
+60,,,,FALSE,,,,,camAa+camBa,camAa,91,camBa,92,flop,Hero Folds,진행중,
+61,665,680,2025-09-01,FALSE,2025. 9. 1 오전 3:45:52,,T02,2025-09-01,camAa+camBa,camAa,93,camBa,94,turn,"Hero Calls 100,000",진행중,
+62,681,697,2025-09-01,FALSE,2025. 9. 1 오전 4:15:17,,T04,2025-09-01,camAa+camBa,camAa,95,camBa,96,flop,V Raises pot,진행중,
+63,698,706,2025-09-01,FALSE,2025. 9. 1 오전 4:45:46,,T03,2025-09-01,camAa+camBa,camAa,97,camBa,98,flop,Hero Bets pot,진행중,
+64,707,721,2025-09-01,FALSE,2025. 9. 1 오전 4:54:06,,T03,2025-09-01,camAa+camBa,camAa,99,camBa,100,flop,"Hero Raises 100,000",진행중,
+65,722,735,2025-09-01,FALSE,2025. 9. 1 오전 5:22:12,HOLDEM,T04,2025-09-01,camAa+camBa,camAa,101,camBa,102,flop,"Fish All In 50,000",진행중,
+66,736,747,2025-09-01,FALSE,2025. 9. 1 오전 5:55:43,HOLDEM,T03,2025-09-01,camAa+camBa,camAa,103,camBa,104,river,LEMMENS Calls 260000,완료,
+67,748,762,2025-09-01,FALSE,2025. 9. 1 오전 6:26:00,HOLDEM,T03,2025-09-01,camAa+camBa,camAa,105,camBa,106,river,LEMMENS Calls 370000,완료,
+68,763,777,2025-09-01,FALSE,2025. 9. 1 오전 6:33:57,HOLDEM,T02,2025-09-01,camAa+camBa,camAa,107,camBa,108,river,Jaewon Folds,완료,
+69,778,783,2025-09-01,FALSE,2025. 9. 1 오전 6:39:27,HOLDEM,T02,2025-09-01,camAa+camBa,camAa,109,camBa,110,preflop,,완료,
+70,784,798,2025-09-02,FALSE,2025. 9. 1 오후 7:13:45,HOLDEM,T02,2025-09-02,camAa+camBa,camAa,111,camBa,112,river,Jaewon Calls 450000,완료,
+71,799,814,2025-09-02,FALSE,2025. 9. 1 오후 7:20:33,HOLDEM,T04,2025-09-02,camAa+camBa,camAa,113,camBa,114,river,Leo Calls 340000,완료,
+72,815,830,2025-09-02,FALSE,2025. 9. 1 오후 7:47:57,HOLDEM,T04,2025-09-02,camAa+camBa,camAa,115,camBa,116,river,Richie All In 680000,완료,
+73,831,841,2025-09-02,FALSE,2025. 9. 1 오후 8:03:19,HOLDEM,T03,2025-09-02,camAa+camBa,camAa,117,camBa,118,river,Leo CALL 340000,완료,
+74,842,857,2025-09-03,FALSE,2025. 9. 3 오전 3:23:40,HOLDEM,T04,2025-09-03,camAa+camBa,camAa,118,camBa,119,preflop,Mike Calls 730000,완료,
+75,858,871,2025-09-04,FALSE,2025. 9. 3 오후 7:47:25,HOLDEM,T03,2025-09-04,camAa+camBa,camAa,2,camBa,3,river,MCDERMOTT Calls 25000,완료,
+76,872,891,2025-09-04,FALSE,2025. 9. 3 오후 8:31:35,HOLDEM,T04,2025-09-04,camAa+camBa,camAa,3,camBa,4,river,Mike All In 30000,완료,
+77,892,911,2025-09-04,FALSE,2025. 9. 3 오후 8:45:29,HOLDEM,T04,2025-09-04,camAa+camBa,camAa,4,camBa,5,river,Hunter Folds,완료,
+78,912,925,2025-09-04,FALSE,2025. 9. 3 오후 10:28:20,HOLDEM,T01,2025-09-04,camAa+camBa,camAa,5,camBa,6,turn,V02 Calls 6000,완료,
+79,926,938,2025-09-04,FALSE,2025. 9. 3 오후 10:45:10,HOLDEM,T04,2025-09-04,camAa+camBa,camAa,6,camBa,7,river,Mike Calls 340000,완료,
+80,939,955,2025-09-04,FALSE,2025. 9. 3 오후 10:57:21,HOLDEM,T02,2025-09-04,camAa+camBa,camAa,7,camBa,8,river,Jaewon Calls 826000,완료,
+81,956,971,2025-09-04,FALSE,2025. 9. 3 오후 10:57:21,HOLDEM,T03,2025-09-04,camAa+camBa,camAa,8,camBa,9,river,CALONGE Calls 530000,완료,
+82,972,986,2025-09-05,FALSE,,HOLDEM,T02,2025-09-05,camAa+camBa,camAa,9,camBa,10,river,Jaewon Folds,완료,
+83,987,1002,2025-09-05,FALSE,,HOLDEM,T03,2025-09-05,camAa+camBa,camAa,119,camBa,120,river,MCDERMOTT All In 754000,완료,
+84,1003,1018,2025-09-05,FALSE,,HOLDEM,T02,2025-09-05,camAa+camBa,camAa,120,camBa,121,preflop,Jaewon All In 110000,완료,
+85,1019,1033,2025-09-05,FALSE,,HOLDEM,T03,2025-09-05,camAa+camBa,camAa,121,camBa,122,river,LEMMENS Calls 65000,완료,
+86,1034,1047,2025-09-05,FALSE,,HOLDEM,T01,2025-09-05,camAa+camBa,camAa,122,camBa,123,preflop,Notable All In 802000,완료,
+87,1048,1061,2025-09-05,FALSE,,HOLDEM,T02,2025-09-05,camAa+camBa,camAa,123,camBa,124,river,Naomi Calls 6000,완료,
+88,1062,1076,2025-09-05,TRUE,2025. 9. 5,HOLDEM,T03,2025-09-05,camAa+camBa,camAa,124,camBa,125,river,LEMMENS Calls 15000,완료,
+89,1077,1089,2025-09-05,FALSE,,HOLDEM,T02,2025-09-05,camAa+camBa,camAa,125,camBa,126,preflop,Naomi Calls 134000,완료,
+90,1090,1105,2025-09-05,TRUE,2025. 9. 6,HOLDEM,T03,2025-09-05,camAa+camBa,camAa,126,camBa,127,river,WAGNER Calls 90000,완료,
+91,1106,1119,2025-09-05,TRUE,2025. 9. 5,HOLDEM,T03,2025-09-05,camAa+camBa,camAa,127,camBa,128,river,LEMMENS Folds,완료,
+92,1120,1133,2025-09-08,FALSE,,HOLDEM,T06,2025-09-08,camAa+camBa,camAa,128,camBa,129,turn,Megerdichian Calls 24500,완료,
+93,1134,1148,2025-09-08,,2025. 9. 8 오전 12:59:41,HOLDEM,T07,2025-09-08,camAa+camBa,camAa,129,camBa,130,preflop,CADA All In 0,완료,
+94,1149,1162,2025-09-08,,2025. 9. 8 오전 1:12:07,HOLDEM,T08,2025-09-08,camAa+camBa,camAa,1,camBa,2,flop,HELLMUTH All In 30000,완료,
+95,1163,1181,2025-09-08,,2025. 9. 8 오전 1:25:19,HOLDEM,T09,2025-09-08,camAa+camBa,camAa,1,camBa,2,river,TROCCOLI Folds,완료,
+96,1182,1194,2025-09-08,,2025. 9. 8 오전 1:52:25,HOLDEM,T10,2025-09-08,camAa+camBa,camAa,130,camBa,131,preflop,ZAOUI Calls 18000,완료,
+97,1195,1208,2025-09-08,,2025. 9. 8 오전 3:15:07,HOLDEM,T12,2025-09-08,camAa+camBa,camAa,131,camBa,132,turn,IACOFANO Calls 22300,완료,
+98,1209,1213,2025-09-10,,2025. 9. 10 오전 12:10:13,HOLDEM,T06,2025-09-10,camAa+camBa,camAa,132,camBa,133,preflop,,완료,
+99,1214,1218,2025-09-10,,2025. 9. 10 오전 12:30:00,HOLDEM,T07,2025-09-10,camAa+camBa,camAa,133,camBa,134,preflop,,완료,
+100,1219,1239,2025-09-11,,2025. 9. 10 오후 8:05:39,HOLDEM,T07,2025-09-11,camAa+camBa,camAa,122,camBa,125,river,CADA Calls 40000,완료,
+101,1240,1262,2025-09-11,,2025. 9. 10 오후 10:18:16,HOLDEM,T09,2025-09-11,camAa+camBa,camAa,134,camBa,135,river,TROCCOLI Folds,완료,
+102,1263,1279,2025-09-12,,2025. 9. 11 오후 11:18:40,HOLDEM,T10,2025-09-12,camAa+camBa,camAa,135,camBa,136,river,ZAOUI All In 920000,완료,
+103,1280,1295,2025-09-12,,2025. 9. 11 오후 11:23:01,HOLDEM,T06,2025-09-12,camAa+camBa,camAa,135,camBa,136,preflop,CADA CALL 40000,완료,
+104,1296,1313,2025-09-12,,2025. 9. 12 오전 4:09:47,HOLDEM,Table03,2025-09-12,camAa+camBa,camAa,136,camBa,137,turn,V04 Calls 3500,완료,
+105,1314,1327,2025-09-12,,2025. 9. 12 오전 4:20:00,HOLDEM,Table03,2025-09-12,camAa+camBa,camAa,137,camBa,138,flop,SOHEE Checks,완료,
+106,1329,1341,2025-09-12,,2025. 9. 12 오전 4:35:36,HOLDEM,Table03,2025-09-12,camAa+camBa,camAa,137,camBa,138,flop,SOHEE Folds,완료,
+107,1342,1352,2025-09-12,,2025. 9. 12 오전 4:53:58,HOLDEM,Table13,2025-09-12,camAa+camBa,camAa,139,camBa,140,flop,,완료,
+108,1353,1370,2025-09-12,,2025. 9. 12 오전 4:58:06,HOLDEM,Table04,2025-09-12,camAa+camBa,camAa,138,camBa,139,preflop,V02 Folds,완료,
+109,1371,1386,2025-09-12,,2025. 9. 12 오전 5:01:16,HOLDEM,Table02,2025-09-12,camAa+camBa,camAa,140,camBa,141,river,SHAHINA Checks,완료,
+110,1387,1400,2025-09-12,,2025. 9. 12 오전 5:04:11,HOLDEM,Table04,2025-09-12,camAa+camBa,camAa,140,camBa,141,flop,SOHEE Bets 3500,완료,
+111,1401,1417,2025-09-12,,2025. 9. 12 오전 5:06:05,HOLDEM,Table04,2025-09-12,camAa+camBa,camAa,141,camBa,142,river,V02 Folds,완료,
+112,1418,1430,2025-09-12,,2025. 9. 12 오전 5:09:45,HOLDEM,Table03,2025-09-12,camAa+camBa,camAa,142,camBa,143,river,SOHEE Calls 4000,완료,
+113,1431,1449,2025-09-12,,2025. 9. 12 오전 5:14:07,HOLDEM,Table04,2025-09-12,camAa+camBa,camAa,142,camBa,143,river,V02 Folds,완료,
+114,1450,1464,2025-09-12,,2025. 9. 12 오전 5:22:54,HOLDEM,Table13,2025-09-12,camAa+camBa,camAa,143,camBa,144,turn,V02 Folds,완료,
+115,1476,1492,2025-09-12,,2025. 9. 12 오전 6:50:26,HOLDEM,Table02,2025-09-12,camAa+camBa,camAa,144,camBa,145,river,DAVID Folds,완료,
+116,1504,1517,2025-09-12,,2025. 9. 12 오전 7:24:30,HOLDEM,Table02,2025-09-12,camAa+camBa,camAa,145,camBa,146,turn,,완료,
+117,1518,1536,2025-09-12,,2025. 9. 12 오전 7:34:35,HOLDEM,Table02,2025-09-12,camAa+camBa,camAa,147,camBa,148,river,V08 Calls NaN,완료,
+118,1537,1552,2025-09-12,,2025. 9. 12 오전 7:40:20,HOLDEM,Table03,2025-09-12,camAa+camBa,camAa,147,camBa,148,turn,SOHEE Checks,완료,
+119,1553,1571,2025-09-12,,2025. 9. 12 오전 7:53:00,HOLDEM,Table03,2025-09-12,camAa+camBa,camAa,148,camBa,149,river,V03 Checks,완료,
+120,1572,1586,2025-09-15,,2025. 9. 14 오후 11:40:29,HOLDEM,T02,2025-09-15,camAa+camBa,camAa,149,camBa,150,river,Naomi Calls 48000,완료,
+121,1587,1602,2025-09-15,,2025. 9. 15 오전 1:15:12,HOLDEM,T01,2025-09-15,camAa+camBa,camAa,150,camBa,151,river,V02 Folds,완료,
+122,1603,1625,2025-09-15,,2025. 9. 15 오전 1:45:00,HOLDEM,Table13,2025-09-15,camAa+camBa,camAa,151,camBa,152,turn,V04 All In 7400,완료,
+123,1626,1637,2025-09-15,,2025. 9. 15 오전 5:06:49,HOLDEM,915T04,2025-09-15,camAa+camBa,camAa,152,camBa,153,preflop,,진행중,
+124,1638,1652,2025-09-15,,2025. 9. 15 오전 5:08:08,HOLDEM,915T04,2025-09-15,camAa+camBa,camAa,152,camBa,153,river,SOHEE Calls 15000,완료,
+125,1653,1672,2025-09-15,,2025. 9. 15 오전 5:50:44,HOLDEM,915T05,2025-09-15,camAa+camBa,camAa,154,camBa,155,river,V02 Folds,검토필요,
+126,1673,1692,2025-09-15,,2025. 9. 15 오전 6:04:10,HOLDEM,915T04,2025-09-15,camAa+camBa,camAa,156,camBa,157,flop,SOHEE Folds,진행중,
+127,1693,1710,2025-09-15,,2025. 9. 15 오전 6:10:00,HOLDEM,915T05,2025-09-15,camAa+camBa,camAa,156,camBa,157,preflop,SHAHINA All In 10900,진행중,
+128,1711,1723,2025-09-15,,2025. 9. 15 오전 6:21:52,HOLDEM,915T05,2025-09-15,camAa+camBa,camAa,158,camBa,159,preflop,V02 Calls 0,진행중,
+129,1724,1736,2025-09-15,,2025. 9. 15 오전 6:26:57,HOLDEM,915T04,2025-09-15,camAa+camBa,camAa,159,camBa,160,river,V08 Calls 10000,검토필요,
+130,1737,1749,2025-09-15,,2025. 9. 15 오전 6:28:51,HOLDEM,915T04,2025-09-15,camAa+camBa,camAa,160,camBa,161,turn,SOHEE Folds,진행중,
+131,1750,1762,2025-09-15,,2025. 9. 15 오전 7:04:29,HOLDEM,915T02,2025-09-15,camAa+camBa,camAa,162,camBa,163,turn,V06 All In 50000,진행중,
+132,1763,1776,2025-09-15,,2025. 9. 15 오전 7:08:07,HOLDEM,915T04,2025-09-15,camAa+camBa,camAa,161,camBa,162,flop,SOHEE Folds,진행중,
+133,1777,1792,2025-09-15,,2025. 9. 15 오전 7:11:21,HOLDEM,915T05,2025-09-15,camAa+camBa,camAa,163,camBa,164,turn,V09 Folds,진행중,
+134,1793,1818,2025-09-15,,2025. 9. 15 오전 7:20:18,HOLDEM,915T05,2025-09-15,camAa+camBa,camAa,164,camBa,165,river,wolfking Checks,검토필요,
+135,1819,1826,2025-09-16,,2025. 9. 16 오전 1:27:22,HOLDEM,T02,2025-09-16,camAa+camBa,camAa,1,camBa,1,preflop,Lad Park Folds,완료,
+136,1827,1840,2025-09-16,,2025. 9. 16 오전 1:53:06,HOLDEM,T02,2025-09-16,camAa+camBa,camAa,165,camBa,166,preflop,"Jaewon Call 15,000 15000",완료,
+137,1841,1849,2025-09-16,,2025. 9. 16 오전 3:22:32,HOLDEM,T02,2025-09-16,camAa+camBa,camAa,166,camBa,167,river,"Jaewon Call 20,000 20000",완료,
+138,1850,1863,2025-09-17,,2025. 9. 16 오후 7:24:43,HOLDEM,T02,2025-09-17,camAa+camBa,camAa,167,camBa,168,river,"Jaewon Call 5,000 5000",완료,Jaewon
+139,1864,1878,2025-09-17,,2025. 9. 16 오후 11:28:50,HOLDEM,915T04,2025-09-17,camAa+camBa,camAa,1,camBa,1,river,"SHAHINA Call 13,000 13000",완료,
+140,1889,1902,2025-09-18,,2025. 9. 17 오후 8:59:18,HOLDEM,915T02,2025-09-18,Cam1+Cam2,Cam1,2,Cam2,2,turn,"V03 Call 4,000 4000",완료,santa
+141,1903,1912,2025-09-18,,2025. 9. 17 오후 10:12:37,HOLDEM,915T02,2025-09-18,Cam1+Cam2,Cam1,3,Cam2,3,river,"santa Call 3,000 3000",완료,
+142,1913,1936,2025-09-18,,2025. 9. 18 오전 3:23:01,HOLDEM,Table04,2025-09-18,Cam1+Cam2,Cam1,4,Cam2,4,river,"V08 Call 41,000 41000",완료,V08
+143,1937,1957,2025-09-18,,2025. 9. 18 오전 3:56:17,HOLDEM,915T02,2025-09-18,Cam1+Cam2,Cam1,5,Cam2,5,turn,"V03 Call 8,000 8000",완료,santa
+144,1958,1976,2025-09-18,,2025. 9. 18 오전 6:37:07,HOLDEM,915T02,2025-09-18,Cam1+Cam2,Cam1,6,Cam2,6,river,santa Check,완료,V05
+145,1977,1994,2025-09-18,,2025. 9. 18 오전 6:44:06,HOLDEM,915T04,2025-09-18,Cam1+Cam2,Cam1,7,Cam2,7,river,SHAHINA Check,완료,SHAHINA
+146,1995,2012,2025-09-19,,2025. 9. 18 오후 6:40:29,HOLDEM,915T02,2025-09-19,Cam1+Cam2,Cam1,8,Cam2,8,river,santa Folds,완료,santa
+147,2013,2033,2025-09-19,,2025. 9. 18 오후 9:11:17,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,9,Cam2,9,flop,"Derik Call 2,000 2000",완료,Derik
+148,2034,2061,2025-09-19,,2025. 9. 18 오후 9:17:33,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,10,Cam2,10,river,Matthew Call 300 300,완료,Matthew
+149,2062,2090,2025-09-19,,2025. 9. 18 오후 9:33:07,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,11,Cam2,11,river,Kai Folds,완료,Matthew
+150,2091,2107,2025-09-19,,2025. 9. 18 오후 9:38:54,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,12,Cam2,12,river,"Derik Call 8,000 8000",완료,Hazed
+151,2108,2114,2025-09-19,,2025. 9. 18 오후 9:48:42,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,13,Cam2,13,preflop,,진행중,
+152,2115,2133,2025-09-19,,2025. 9. 18 오후 9:56:38,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,14,Cam2,14,river,Hazed All In 22100,검토필요,
+153,2134,2145,2025-09-19,,2025. 9. 18 오후 10:12:12,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,15,Cam2,15,preflop,,완료,Margot
+154,2146,2163,2025-09-19,,2025. 9. 18 오후 10:30:24,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,16,Cam2,16,river,Hazed Check,완료,Rhina
+155,2164,2182,2025-09-19,,2025. 9. 18 오후 10:36:19,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,17,Cam2,17,turn,"Rhina Call -6,000 -6000",진행중,
+156,2183,2220,2025-09-19,,2025. 9. 18 오후 10:44:16,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,18,Cam2,18,turn,Derik All In -12000,완료,Matthew
+157,2221,2232,2025-09-19,,2025. 9. 18 오후 10:47:36,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,19,Cam2,19,preflop,"Zed Call 8,000 8000",완료,Rhina
+158,2255,2273,2025-09-19,,2025. 9. 18 오후 10:52:24,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,20,Cam2,20,river,"Zed Call 20,000 20000",완료,Rhina
+159,2292,2308,2025-09-19,,2025. 9. 18 오후 11:41:41,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,21,Cam2,21,river,"Margot Call 13,000 13000",완료,Margot
+160,2309,2324,2025-09-19,,2025. 9. 18 오후 11:45:44,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,22,Cam2,22,preflop,Rhina Folds,완료,Rhina
+161,2325,2343,2025-09-19,,2025. 9. 18 오후 11:54:56,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,23,Cam2,23,river,Zed Check,완료,Chris
+162,2344,2367,2025-09-19,,2025. 9. 19 오전 12:31:45,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,24,Cam2,24,river,"Matthew Call 409,000 409000",완료,Hazed
+163,2368,2382,2025-09-19,,2025. 9. 19 오전 12:34:56,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,25,Cam2,25,turn,Rhina Folds,완료,Zed
+164,2383,2404,2025-09-19,,2025. 9. 19 오전 12:42:20,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,26,Cam2,26,turn,Chris Check,진행중,
+165,2405,2423,2025-09-19,,2025. 9. 19 오전 12:58:50,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,27,Cam2,27,river,"Margot Call 10,000 10000",검토필요,
+166,2424,2443,2025-09-19,,2025. 9. 19 오전 1:04:21,HOLDEM,GGPtable,2025-09-19,Cam1+Cam2,Cam1,28,Cam2,28,river,"Rhina Call 30,000 30000",검토필요,
+167,2444,2449,2025-09-19,,2025. 9. 19 오전 2:06:38,HOLDEM,GGPT02,2025-09-19,Cam1+Cam2,Cam1,29,Cam2,29,preflop,,진행중,
+168,2450,2478,2025-09-19,,2025. 9. 19 오전 5:02:16,HOLDEM,NewT03,2025-09-19,Cam1+Cam2,Cam1,30,Cam2,30,river,Heidi Swift Folds,완료,Heidi Swift
+169,2479,2484,2025-09-19,,2025. 9. 19 오전 5:05:43,HOLDEM,NewT05,2025-09-19,Cam1+Cam2,Cam1,31,Cam2,31,preflop,,진행중,
+170,2485,2500,2025-09-19,,2025. 9. 19 오전 5:15:53,HOLDEM,NewT04,2025-09-19,Cam1+Cam2,Cam1,32,Cam2,32,river,Jeff Luettgen Check,검토필요,
+171,2501,2516,2025-09-19,,2025. 9. 19 오전 5:25:52,HOLDEM,NewT03,2025-09-19,Cam1+Cam2,Cam1,33,Cam2,33,river,"Villain09 All-in 35,000 35000",완료,Heidi Swift
+172,2517,2530,2025-09-19,,2025. 9. 19 오전 6:05:36,HOLDEM,NewT14,2025-09-19,Cam1+Cam2,Cam1,34,Cam2,34,river,V06 Folds,검토필요,
+173,2531,2548,2025-09-19,,2025. 9. 19 오전 6:23:21,HOLDEM,NewT14,2025-09-19,Cam1+Cam2,Cam1,35,Cam2,35,river,Adam Kertzmann Check,완료,Adam Kertzmann
+174,2549,2562,2025-09-19,,2025. 9. 19 오전 6:28:31,HOLDEM,NewT03,2025-09-19,Cam1+Cam2,Cam1,36,Cam2,36,turn,V04 Folds,완료,Heidi Swift
+175,2575,2585,2025-09-19,,2025. 9. 19 오전 6:37:44,HOLDEM,NewT03,2025-09-19,Cam1+Cam2,Cam1,37,Cam2,37,preflop,,완료,Heidi Swift
+176,2586,2604,2025-09-19,,2025. 9. 19 오전 6:42:54,HOLDEM,NewT06,2025-09-19,Cam1+Cam2,Cam1,38,Cam2,38,river,V05 Check,완료,Katie Hills
+177,2605,2630,2025-09-19,,2025. 9. 19 오전 6:53:11,HOLDEM,NewT04,2025-09-19,Cam1+Cam2,Cam1,39,Cam2,39,river,"V07 Call 37,000 37000",완료,V07
+178,2631,2642,2025-09-19,,2025. 9. 19 오전 7:11:56,HOLDEM,NewT06,2025-09-19,Cam1+Cam2,Cam1,40,Cam2,40,preflop,,완료,V05
+179,2643,2658,2025-09-19,,2025. 9. 19 오전 7:19:39,HOLDEM,NewT18,2025-09-19,Cam1+Cam2,Cam1,41,Cam2,41,river,"Pauline Lebsack Call 11,000 11000",완료,V03
+180,2659,2672,2025-09-19,,2025. 9. 19 오전 7:36:57,HOLDEM,NewT03,2025-09-19,Cam1+Cam2,Cam1,42,Cam2,42,turn,Heidi Swift Folds,완료,V04
+181,2673,2684,2025-09-19,,2025. 9. 19 오전 8:11:03,HOLDEM,NewT13,2025-09-19,Cam1+Cam2,Cam1,43,Cam2,43,preflop,,진행중,
+182,2685,2702,2025-09-22,,2025. 9. 22 오전 4:19:38,HOLDEM,NewT02,2025-09-22,Cam1+Cam2,Cam1,44,Cam2,44,river,"Jeff Luettgen Call 15,000 15000",완료,V04
+183,2703,2722,2025-09-22,,2025. 9. 22 오전 6:04:23,HOLDEM,10,2025-09-22,Cam1+Cam2,Cam1,0,Cam2,0,river,Iris Windler Check,완료,Delores Collins
+184,2723,2740,2025-09-22,,2025. 9. 22 오전 6:28:02,HOLDEM,10,2025-09-22,Cam1+Cam2,Cam1,0,Cam2,0,river,"Delores Collins Call 15,000 15000",완료,Delores Collins
+185,2025-09-24,HOLDEM,10,2025-09-24,Cam1+Cam2,Cam1,10168,Cam2,20169,preflop,"Clara DuBuque Call 8,000 8000",완료,,,,,
+185,2025-09-24,HOLDEM,10,2025-09-24,Cam1+Cam2,Cam1,10168,Cam2,20169,preflop,"Clara DuBuque Call 8,000 8000",완료,,,,,
+185,2025-09-24,HOLDEM,10,2025-09-24,Cam1+Cam2,Cam1,10168,Cam2,20169,preflop,"Clara DuBuque Call 8,000 8000",완료,,,,,
+186,2025-09-24,HOLDEM,10,2025-09-24,Cam1+Cam2,Cam1,10168,Cam2,20169,preflop,"Clara DuBuque Call 8,000 8000",완료,,,,,
+187,2025-09-24,HOLDEM,9,2025-09-24,Cam1+Cam2,Cam1,10168,Cam2,20169,river,"Adam Kertzmann Call 5,000 5000",완료,,,,,
+188,2025-09-24,HOLDEM,1,2025-09-24,Cam1+Cam2,Cam1,10168,Cam2,20169,river,V07 Folds,완료,,,,,
+189,2025-09-24,HOLDEM,2,2025-09-24,Cam1+Cam2,Cam1,10168,Cam2,20169,river,"V06 Call 15,000 15000",완료,,,,,
