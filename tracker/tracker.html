@@ -1,0 +1,431 @@
+<!-- tracker.html — Tracker (Key Player & Table Manager) v1.4 -->
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Tracker - Key Player & Table Manager</title>
+<style>
+:root{
+  font-size:clamp(18px,5.5vw,26px);
+  --sp-xs:clamp(4px,1vw,8px);
+  --sp-sm:clamp(8px,2vw,12px);
+  --sp-md:clamp(10px,2.5vw,16px);
+  --sp-lg:clamp(14px,3.5vw,24px);
+  --bg:#0b0d12;--panel:#101522;--line:#1f2435;--muted:#9aa3b2;--acc:#2a6fff;--text:#e7eaf0;--green:#22c55e;--red:#ef4444
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;display:flex;flex-direction:column}
+header{padding:var(--sp-sm) var(--sp-md);background:#0f1320;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.wrap{padding:var(--sp-sm);flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+h2{margin:0 0 var(--sp-md);color:#a9b8ff;font-size:1.1rem;padding:0 var(--sp-xs)}
+.small{font-size:.8rem}.muted{color:var(--muted)}
+.hidden{display:none !important}
+
+/* === Key Player Card === */
+.keyPlayerCard{background:var(--panel);border:1px solid var(--line);border-radius:var(--sp-md);padding:var(--sp-md);margin-bottom:var(--sp-sm)}
+.cardHeader{display:flex;gap:var(--sp-xs);align-items:center;margin-bottom:var(--sp-xs)}
+.tableLabel{background:#223266;padding:var(--sp-xs) var(--sp-sm);border-radius:var(--sp-xs);font-size:.75rem;font-weight:700}
+.playerName{font-size:.85rem;font-weight:700}
+.flag{font-size:.9rem}
+.chipRow{display:flex;gap:var(--sp-xs);align-items:center;margin-bottom:var(--sp-sm)}
+.chips{font-size:1rem;font-weight:800;cursor:pointer;color:var(--acc);text-decoration:underline}
+.chipChange{font-size:.75rem;font-weight:700}
+.chipChange.up{color:var(--green)}
+.chipChange.down{color:var(--red)}
+.chipChange.same{color:var(--muted)}
+.manageBtn{background:#0f1320;color:var(--text);border:1px solid #2a3249;border-radius:var(--sp-sm);padding:var(--sp-sm) var(--sp-md);font-size:.8rem;width:100%;cursor:pointer}
+
+/* === Table View === */
+.backBtn{background:transparent;border:none;color:var(--acc);font-size:.9rem;cursor:pointer;padding:var(--sp-sm);margin-bottom:var(--sp-sm)}
+.playerRow{background:var(--panel);border:1px solid var(--line);border-radius:var(--sp-sm);padding:var(--sp-sm) var(--sp-md);margin-bottom:var(--sp-sm);display:flex;align-items:center;gap:var(--sp-sm)}
+.seat{font-weight:800;font-size:.85rem;min-width:28px}
+.name{flex:1;font-weight:700;font-size:.85rem}
+.keyStar{color:#fbbf24}
+.emptySeat{flex:1;color:var(--muted);font-style:italic}
+.addBtn{background:#223266;border:1px solid var(--acc);color:var(--acc);border-radius:var(--sp-sm);padding:var(--sp-xs) var(--sp-md);font-size:.8rem;cursor:pointer}
+.deleteBtn{background:transparent;border:none;font-size:1.1rem;cursor:pointer;padding:var(--sp-xs) var(--sp-sm)}
+
+/* === Overlay === */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100}
+#overlay.show{display:flex}
+.overlayBox{width:min(440px,90vw);background:#0f1320;border:1px solid #2a3249;border-radius:var(--sp-md);padding:var(--sp-lg)}
+.overlayTitle{font-size:1rem;font-weight:700;margin-bottom:var(--sp-md);color:#a9b8ff}
+.overlayInput{width:100%;background:#0b0d12;color:var(--text);border:1px solid #2a3249;border-radius:var(--sp-sm);padding:var(--sp-md);font-size:1rem;margin-bottom:var(--sp-md)}
+.overlayInput:focus{outline:2px solid var(--acc)}
+.overlayActions{display:flex;gap:var(--sp-md);margin-top:var(--sp-md)}
+.btnCancel{background:#2a3249;border:1px solid #2a3249;color:var(--text);border-radius:var(--sp-sm);padding:var(--sp-md);font-size:.95rem;flex:1;cursor:pointer}
+.btnConfirm{background:var(--acc);border:1px solid var(--acc);color:#fff;border-radius:var(--sp-sm);padding:var(--sp-md);font-size:.95rem;flex:1;cursor:pointer;font-weight:700}
+
+/* === Loading === */
+.loading{text-align:center;padding:var(--sp-lg);color:var(--muted)}
+.error{background:#b91c1c;color:#ffe5e5;padding:var(--sp-md);border-radius:var(--sp-sm);margin-bottom:var(--sp-md);font-size:.9rem}
+</style>
+</head>
+<body>
+<header>
+  <div><strong>🎯 Tracker</strong><span class="muted small"> v1.4</span></div>
+</header>
+
+<div class="wrap">
+  <!-- Key Player View -->
+  <div id="viewKeyPlayers">
+    <h2>Key Players (<span id="keyCount">0</span>)</h2>
+    <div id="keyPlayerList" class="loading">로딩 중...</div>
+  </div>
+
+  <!-- Table View -->
+  <div id="viewTable" class="hidden">
+    <button class="backBtn" onclick="showKeyPlayerView()">← Back</button>
+    <h2 id="tableTitle">T##</h2>
+    <div id="tablePlayerList"></div>
+  </div>
+</div>
+
+<!-- Overlay -->
+<div id="overlay">
+  <div class="overlayBox">
+    <div id="overlayContent"></div>
+  </div>
+</div>
+
+<script>
+/* ===== State ===== */
+let currentView = 'key'; // 'key' | 'table'
+let currentTableId = null;
+let keyPlayers = [];
+
+/* ===== Init ===== */
+window.onload = () => {
+  loadKeyPlayers();
+};
+
+/* ===== View Switching ===== */
+function showKeyPlayerView() {
+  document.getElementById('viewKeyPlayers').classList.remove('hidden');
+  document.getElementById('viewTable').classList.add('hidden');
+  currentView = 'key';
+  currentTableId = null;
+}
+
+function showTableView(tableId) {
+  document.getElementById('viewKeyPlayers').classList.add('hidden');
+  document.getElementById('viewTable').classList.remove('hidden');
+  document.getElementById('tableTitle').textContent = tableId;
+  currentView = 'table';
+  currentTableId = tableId;
+  loadTablePlayers(tableId);
+}
+
+/* ===== Key Player View ===== */
+function loadKeyPlayers() {
+  const list = document.getElementById('keyPlayerList');
+  list.innerHTML = '<div class="loading">로딩 중...</div>';
+
+  google.script.run
+    .withSuccessHandler(players => {
+      keyPlayers = players;
+      renderKeyPlayers(players);
+    })
+    .withFailureHandler(err => {
+      list.innerHTML = `<div class="error">에러: ${err.message}</div>`;
+    })
+    .getKeyPlayers();
+}
+
+function renderKeyPlayers(players) {
+  const list = document.getElementById('keyPlayerList');
+  const count = document.getElementById('keyCount');
+
+  if (players.length === 0) {
+    list.innerHTML = '<div class="muted small">키 플레이어가 없습니다.</div>';
+    count.textContent = '0';
+    return;
+  }
+
+  list.innerHTML = '';
+  count.textContent = players.length;
+
+  players.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'keyPlayerCard';
+
+    const chipChange = getChipChange(p.tableNo, p.seatNo, p.chips);
+    const changeHTML = chipChange.amount !== 0
+      ? `<span class="chipChange ${chipChange.direction}">${chipChange.text}</span>`
+      : '';
+
+    card.innerHTML = `
+      <div class="cardHeader">
+        <span class="tableLabel">${p.tableNo}</span>
+        <span class="playerName">${p.player} (${p.seatNo})</span>
+        <span class="flag">${getFlag(p.nation)}</span>
+      </div>
+      <div class="chipRow">
+        <span class="chips" onclick="editChips('${p.tableNo}', '${p.seatNo}', ${p.chips}, '${p.player}')">${formatChips(p.chips)}</span>
+        ${changeHTML}
+      </div>
+      <button class="manageBtn" onclick="showTableView('${p.tableNo}')">${p.tableNo} 관리</button>
+    `;
+
+    list.appendChild(card);
+  });
+}
+
+/* ===== Table View ===== */
+function loadTablePlayers(tableId) {
+  const list = document.getElementById('tablePlayerList');
+  list.innerHTML = '<div class="loading">로딩 중...</div>';
+
+  google.script.run
+    .withSuccessHandler(players => {
+      renderTablePlayers(tableId, players);
+    })
+    .withFailureHandler(err => {
+      list.innerHTML = `<div class="error">에러: ${err.message}</div>`;
+    })
+    .getTablePlayers(tableId);
+}
+
+function renderTablePlayers(tableId, players) {
+  const list = document.getElementById('tablePlayerList');
+  list.innerHTML = '';
+
+  players.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'playerRow';
+
+    if (p.empty) {
+      row.innerHTML = `
+        <span class="seat">${p.seatNo}</span>
+        <span class="emptySeat">(빈 좌석)</span>
+        <button class="addBtn" onclick="addPlayerPrompt('${tableId}', '${p.seatNo}')">[+]</button>
+      `;
+    } else {
+      const keyStar = p.keyplayer ? '<span class="keyStar">⭐</span>' : '';
+      row.innerHTML = `
+        <span class="seat">${p.seatNo}</span>
+        <span class="name">${p.player}${keyStar}</span>
+        <span class="flag">${getFlag(p.nation)}</span>
+        <span class="chips" onclick="editChips('${tableId}', '${p.seatNo}', ${p.chips}, '${p.player}')">${formatChips(p.chips)}</span>
+        <button class="deleteBtn" onclick="deletePlayerConfirm('${tableId}', '${p.seatNo}', '${p.player}')">🗑️</button>
+      `;
+    }
+
+    list.appendChild(row);
+  });
+}
+
+/* ===== Edit Chips ===== */
+function editChips(tableId, seatNo, currentChips, playerName) {
+  const overlay = document.getElementById('overlay');
+  const content = document.getElementById('overlayContent');
+
+  content.innerHTML = `
+    <div class="overlayTitle">${seatNo} ${playerName} 칩 수정</div>
+    <div class="muted small">현재: ${formatChips(currentChips)}</div>
+    <input type="text" id="chipInput" class="overlayInput" placeholder="예: 750000 또는 750k" autocomplete="off" inputmode="decimal">
+    <div class="overlayActions">
+      <button class="btnCancel" onclick="closeOverlay()">취소</button>
+      <button class="btnConfirm" onclick="confirmEditChips('${tableId}', '${seatNo}', ${currentChips})">확인</button>
+    </div>
+  `;
+
+  overlay.classList.add('show');
+  setTimeout(() => document.getElementById('chipInput').focus(), 100);
+}
+
+function confirmEditChips(tableId, seatNo, oldChips) {
+  const input = document.getElementById('chipInput').value.trim();
+  if (!input) {
+    alert('칩을 입력하세요.');
+    return;
+  }
+
+  const newChips = parseChips(input);
+  if (newChips === null || newChips < 0) {
+    alert('올바른 숫자를 입력하세요 (예: 750000 또는 750k)');
+    return;
+  }
+
+  closeOverlay();
+  showLoading();
+
+  google.script.run
+    .withSuccessHandler(() => {
+      saveChipHistory(tableId, seatNo, newChips);
+      if (currentView === 'key') {
+        loadKeyPlayers();
+      } else {
+        loadTablePlayers(currentTableId);
+      }
+    })
+    .withFailureHandler(err => {
+      alert(`에러: ${err.message}`);
+      hideLoading();
+    })
+    .updatePlayerChips(tableId, seatNo, newChips);
+}
+
+/* ===== Add Player ===== */
+function addPlayerPrompt(tableId, seatNo) {
+  const overlay = document.getElementById('overlay');
+  const content = document.getElementById('overlayContent');
+
+  content.innerHTML = `
+    <div class="overlayTitle">${seatNo} 플레이어 추가</div>
+    <input type="text" id="nameInput" class="overlayInput" placeholder="이름" autocomplete="off">
+    <select id="nationInput" class="overlayInput">
+      <option value="KR">🇰🇷 KR</option>
+      <option value="US">🇺🇸 US</option>
+      <option value="JP">🇯🇵 JP</option>
+      <option value="CN">🇨🇳 CN</option>
+      <option value="GB">🇬🇧 GB</option>
+      <option value="FR">🇫🇷 FR</option>
+      <option value="DE">🇩🇪 DE</option>
+      <option value="CA">🇨🇦 CA</option>
+      <option value="AU">🇦🇺 AU</option>
+      <option value="TW">🇹🇼 TW</option>
+    </select>
+    <input type="text" id="chipsInput" class="overlayInput" placeholder="칩 (예: 280000 또는 280k)" autocomplete="off" inputmode="decimal">
+    <label style="display:flex;align-items:center;gap:var(--sp-sm);margin-bottom:var(--sp-md)">
+      <input type="checkbox" id="keyInput" style="width:20px;height:20px">
+      <span>키 플레이어로 등록</span>
+    </label>
+    <div class="overlayActions">
+      <button class="btnCancel" onclick="closeOverlay()">취소</button>
+      <button class="btnConfirm" onclick="confirmAddPlayer('${tableId}', '${seatNo}')">추가</button>
+    </div>
+  `;
+
+  overlay.classList.add('show');
+  setTimeout(() => document.getElementById('nameInput').focus(), 100);
+}
+
+function confirmAddPlayer(tableId, seatNo) {
+  const name = document.getElementById('nameInput').value.trim();
+  const nation = document.getElementById('nationInput').value;
+  const chipsInput = document.getElementById('chipsInput').value.trim();
+  const isKey = document.getElementById('keyInput').checked;
+
+  if (!name) {
+    alert('이름을 입력하세요.');
+    return;
+  }
+  if (!chipsInput) {
+    alert('칩을 입력하세요.');
+    return;
+  }
+
+  const chips = parseChips(chipsInput);
+  if (chips === null || chips < 0) {
+    alert('올바른 칩 숫자를 입력하세요.');
+    return;
+  }
+
+  closeOverlay();
+  showLoading();
+
+  google.script.run
+    .withSuccessHandler(() => {
+      if (currentView === 'key' && isKey) {
+        loadKeyPlayers();
+      } else {
+        loadTablePlayers(currentTableId);
+      }
+    })
+    .withFailureHandler(err => {
+      alert(`에러: ${err.message}`);
+      hideLoading();
+    })
+    .addPlayer(tableId, seatNo, name, nation, chips, isKey);
+}
+
+/* ===== Delete Player ===== */
+function deletePlayerConfirm(tableId, seatNo, playerName) {
+  if (!confirm(`${seatNo} ${playerName} 삭제하시겠습니까?`)) return;
+
+  showLoading();
+
+  google.script.run
+    .withSuccessHandler(() => {
+      if (currentView === 'key') {
+        loadKeyPlayers();
+      } else {
+        loadTablePlayers(currentTableId);
+      }
+    })
+    .withFailureHandler(err => {
+      alert(`에러: ${err.message}`);
+      hideLoading();
+    })
+    .removePlayer(tableId, seatNo);
+}
+
+/* ===== Utilities ===== */
+function parseChips(input) {
+  if (!input) return null;
+  const str = String(input).trim().toLowerCase();
+  if (str.endsWith('k')) {
+    const num = parseFloat(str.slice(0, -1));
+    return isNaN(num) ? null : Math.round(num * 1000);
+  }
+  const num = parseFloat(str.replace(/[^\d.]/g, ''));
+  return isNaN(num) ? null : Math.round(num);
+}
+
+function formatChips(chips) {
+  if (chips >= 1000) {
+    return Math.round(chips / 1000) + 'k';
+  }
+  return chips.toString();
+}
+
+function getFlag(nationCode) {
+  const flags = {
+    'KR': '🇰🇷', 'US': '🇺🇸', 'JP': '🇯🇵', 'CN': '🇨🇳', 'GB': '🇬🇧',
+    'FR': '🇫🇷', 'DE': '🇩🇪', 'CA': '🇨🇦', 'AU': '🇦🇺', 'TW': '🇹🇼'
+  };
+  return flags[nationCode] || '🌐';
+}
+
+function getChipChange(tableId, seatNo, currentChips) {
+  const key = `${tableId}_${seatNo}`;
+  const history = JSON.parse(localStorage.getItem('phl_chipHistory') || '{}');
+  const oldChips = history[key] || currentChips;
+
+  const diff = currentChips - oldChips;
+  if (diff > 0) {
+    return { amount: diff, direction: 'up', text: `↑${formatChips(diff)}` };
+  } else if (diff < 0) {
+    return { amount: diff, direction: 'down', text: `↓${formatChips(Math.abs(diff))}` };
+  } else {
+    return { amount: 0, direction: 'same', text: '' };
+  }
+}
+
+function saveChipHistory(tableId, seatNo, chips) {
+  const key = `${tableId}_${seatNo}`;
+  const history = JSON.parse(localStorage.getItem('phl_chipHistory') || '{}');
+  history[key] = chips;
+  localStorage.setItem('phl_chipHistory', JSON.stringify(history));
+}
+
+function closeOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function showLoading() {
+  const list = currentView === 'key'
+    ? document.getElementById('keyPlayerList')
+    : document.getElementById('tablePlayerList');
+  list.innerHTML = '<div class="loading">처리 중...</div>';
+}
+
+function hideLoading() {
+  // 리렌더링으로 처리됨
+}
+</script>
+</body>
+</html>

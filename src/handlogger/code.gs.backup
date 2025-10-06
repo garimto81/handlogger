@@ -1,18 +1,38 @@
-/** Code.gs — Poker Hand Logger — v1.1.1 (2025-10-02)
- * 패치 내용(v1.1.1):
- * - VIRTUAL 시트 C열(Date/Time) 혼합 데이터(Date/숫자/문자열) 파싱 지원
- * - getValues + getDisplayValues 동시 사용, HH:mm(:ss)로 정규화하여 "오늘 KST" 시각으로 비교
- * - rowTime <= nowKST 인 가장 아래쪽(가장 최근) 행을 선택
- * - 그 외 저장/리뷰/쓰기 로직은 v1.1과 동일
+/** Code.gs — Poker Hand Logger — 버전은 VERSION 상수 참조
  *
- * v1.1에서의 주요 변경(요약):
- * - 승자 판정 제거, J열 공란, 로그 강화, 락 재시도, 외부쓰기 최적화
+ * v2.5.0 변경사항 (2025-10-06):
+ * - ⭐ VIRTUAL C열 Time 매칭: pushToVirtual() 재작성
+ * - ⭐ Keyplayer 필터링: buildSubtitleBlock_() 추가
+ * - extractTimeHHMM_(): ISO → HH:MM KST 변환
+ * - Date 객체 처리: VIRTUAL C열 Date 형식 지원
+ * - 헤더 3행 스킵: 행4부터 데이터 읽기
+ *
+ * v2.4.0 변경사항:
+ * - XSS 취약점 수정 (textContent 전환)
+ * - localStorage 키 통일 (phl_extSheetId)
+ *
+ * v2.3.0 변경사항:
+ * - Type 시트 통합: APP_SPREADSHEET 단일 파일
+ * - VIRTUAL 시트 선별 전송
+ *
+ * v2.2.0 변경사항:
+ * - Review mode 2-panel 레이아웃
+ * - 플레이어 이름 표시 개선
  */
 
-const APP_SPREADSHEET_ID = '19e7eDjoZRFZooghZJF3XmOZzZcgmqsp9mFAfjvJWhj4'; // HANDS/ACTIONS/CONFIG/LOG 저장소
-const ROSTER_SPREADSHEET_ID = '1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U'; // 테이블/플레이어 명부
-const ROSTER_SHEET_NAME = 'Type';
-const SH = { HANDS:'HANDS', ACTS:'ACTIONS', CONFIG:'CONFIG', LOG:'LOG' };
+/* ===== 버전 관리 ===== */
+const VERSION = 'v2.5.0';
+const VERSION_DATE = '2025-10-06';
+const VERSION_FULL = `${VERSION} (${VERSION_DATE})`;
+
+const APP_SPREADSHEET_ID = '19e7eDjoZRFZooghZJF3XmOZzZcgmqsp9mFAfjvJWhj4'; // 단일 파일 저장소
+const SH = {
+  HANDS: 'HANDS',
+  ACTS: 'ACTIONS',
+  CONFIG: 'CONFIG',
+  LOG: 'LOG',
+  TYPE: 'Type'  // ⭐ v2.3: 테이블/플레이어 (통합)
+};
 
 const ROSTER_HEADERS = {
   tableNo:['Table No.','TableNo','Table_Number','table_no'],
@@ -20,6 +40,7 @@ const ROSTER_HEADERS = {
   player:['Players','Player','Name'],
   nation:['Nationality','Nation','Country'],
   chips:['Chips','Stack','Starting Chips','StartStack'],
+  keyplayer:['Keyplayer','Key Player','KeyPlayer','key_player'], // ⭐ v2.5
 };
 
 function withScriptLock_(fn){
@@ -39,7 +60,6 @@ function withScriptLock_(fn){
 }
 
 function appSS_(){ return SpreadsheetApp.openById(APP_SPREADSHEET_ID); }
-function rosterSS_(){ return SpreadsheetApp.openById(ROSTER_SPREADSHEET_ID); }
 function getOrCreateSheet_(ss,n){ return ss.getSheetByName(n)||ss.insertSheet(n); }
 function setHeaderIfEmpty_(sh,hdr){
   const f=sh.getRange(1,1,1,hdr.length).getValues()[0];
@@ -89,19 +109,24 @@ function ensureSheets_(){
   ]);
   setHeaderIfEmpty_(getOrCreateSheet_(ss,SH.CONFIG),['table_id','btn_seat','hand_seq','updated_at']);
   setHeaderIfEmpty_(getOrCreateSheet_(ss,SH.LOG),['ts','func','table_id','code','msg','user']);
+  // ⭐ v2.3: Type 시트 초기화 (통합)
+  setHeaderIfEmpty_(getOrCreateSheet_(ss,SH.TYPE),[
+    'Table No.','Seat No.','Players','Nationality','Chips'
+  ]);
 }
 
 function doGet(){
   ensureSheets_();
   return HtmlService.createTemplateFromFile('index').evaluate()
-    .setTitle('Poker Hand Logger — v1.1.1')
+    .setTitle('Poker Hand Logger — ' + VERSION)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/* ==== ROSTER ==== */
+/* ==== Type 시트 (v2.3: 통합) ==== */
 function readRoster_(){
-  const ss=rosterSS_();
-  const sh=ss.getSheetByName(ROSTER_SHEET_NAME)||ss.getSheets()[0];
+  const ss=appSS_();  // ⭐ v2.3: 단일 파일
+  const sh=ss.getSheetByName(SH.TYPE);  // ⭐ v2.3: 상수 사용
+  if(!sh) throw new Error('Type sheet not found in APP_SPREADSHEET');
   const {header,rows}=readAll_(sh);
   const idx={
     tableNo:findColIndex_(header,ROSTER_HEADERS.tableNo),
@@ -109,6 +134,7 @@ function readRoster_(){
     player:findColIndex_(header,ROSTER_HEADERS.player),
     nation:findColIndex_(header,ROSTER_HEADERS.nation),
     chips:findColIndex_(header,ROSTER_HEADERS.chips),
+    keyplayer:findColIndex_(header,ROSTER_HEADERS.keyplayer), // ⭐ v2.5
   };
   const roster={}, tables=new Set();
   rows.forEach(r=>{
@@ -118,8 +144,9 @@ function readRoster_(){
     const name=idx.player>=0?String(r[idx.player]).trim():'';
     const nation=idx.nation>=0?String(r[idx.nation]).trim():'';
     const chips=idx.chips>=0?toInt_(r[idx.chips]):0;
+    const keyplayer=idx.keyplayer>=0?String(r[idx.keyplayer]).trim():''; // ⭐ v2.5
     tables.add(t);
-    (roster[t]=roster[t]||[]).push({seat,player:name,nation,chips});
+    (roster[t]=roster[t]||[]).push({seat,player:name,nation,chips,keyplayer}); // ⭐ keyplayer 추가
   });
   Object.keys(roster).forEach(t=>roster[t].sort((a,b)=>a.seat-b.seat));
   return { tables:[...tables].sort((a,b)=>toInt_(a)-toInt_(b)), roster };
@@ -209,7 +236,7 @@ function _saveCore_(payload){
     String(payload.pot_final||''),
     JSON.stringify(payload.stack_snapshot||{}),
     JSON.stringify(payload.holes||{}),
-    'v1.1.1'
+    VERSION
   ]);
 
   const acts=Array.isArray(payload.actions)?payload.actions:[];
@@ -398,6 +425,7 @@ function parseTimeCellToTodayKST_(raw, disp){
   return base;
 }
 
+// ⚠️ DEPRECATED: C열 Time 매칭 방식 (v2.3 이전)
 function updateExternalVirtual_(sheetId, detail, ext){
   if(!sheetId) return {updated:false, reason:'no-sheetId'};
 
@@ -445,6 +473,108 @@ function updateExternalVirtual_(sheetId, detail, ext){
   return {updated:true, row:pickRow};
 }
 
+/* ===== VIRTUAL 시트 전송 (v2.5+) ===== */
+// Review 모드에서 선택된 핸드를 VIRTUAL 시트 C열 Time 매칭하여 업데이트
+function pushToVirtual(hand_id, sheetId, bb){
+  if(!hand_id) throw new Error('hand_id required');
+  if(!sheetId) throw new Error('sheetId required');
+
+  return withScriptLock_(()=>{
+    log_('PUSH_VIRTUAL_BEGIN', `hand_id=${hand_id} sheetId=${sheetId}`);
+
+    const detail = getHandDetail(hand_id); // {head, acts}
+    if(!detail || !detail.head) throw new Error(`Hand not found: ${hand_id}`);
+
+    const head = detail.head;
+    const isoTime = head.started_at || nowKST_().toISOString();
+    const hhmmTime = extractTimeHHMM_(isoTime); // ISO → "HH:MM"
+
+    if(!hhmmTime) throw new Error('Invalid started_at time');
+
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sh = ss.getSheetByName('VIRTUAL') || ss.getSheets()[0];
+
+    // C열(Time) 전체 읽기 (헤더 행3 스킵, 데이터는 행4부터)
+    const lastRow = sh.getLastRow();
+    if(lastRow < 4) throw new Error('VIRTUAL 시트에 데이터 행이 없습니다');
+
+    const cCol = sh.getRange(4, 3, lastRow-3, 1).getValues(); // C열 (4행부터)
+
+    // HH:MM 매칭되는 행 찾기
+    let targetRow = -1;
+    for(let i=0; i<cCol.length; i++){
+      const rawValue = cCol[i][0];
+      let cellTime = '';
+
+      // Time 형식 처리: Date 객체면 HH:MM 추출
+      if(rawValue instanceof Date){
+        // Google Apps Script는 Date 객체를 스크립트 타임존(KST)으로 자동 변환
+        cellTime = String(rawValue.getHours()).padStart(2, '0') + ':' +
+                   String(rawValue.getMinutes()).padStart(2, '0');
+      } else {
+        cellTime = String(rawValue).trim();
+      }
+
+      if(cellTime === hhmmTime){
+        targetRow = i + 4; // 배열 인덱스 → 시트 행 번호 (행4부터 시작)
+        log_('VIRTUAL_MATCH', `row=${targetRow} cellTime=${cellTime}`);
+        break;
+      }
+    }
+
+    // 행이 없으면 디버깅 로그 + 에러
+    if(targetRow === -1){
+      const sample = cCol.slice(0, 10).map((r,i) => {
+        const v = r[0];
+        const t = v instanceof Date ? `Date(${v.getHours()}:${v.getMinutes()})` : String(v);
+        return `row${i+4}:${t}`;
+      }).join(', ');
+      log_('VIRTUAL_NOMATCH', `hhmmTime=${hhmmTime} sample=[${sample}]`);
+      throw new Error(`VIRTUAL 시트에 Time=${hhmmTime} 행이 없습니다. LOG 시트 확인`);
+    }
+
+    // F열 멱등성 체크 (이미 입력됐는지)
+    const existingF = sh.getRange(targetRow, 6).getValue();
+    if(existingF && String(existingF).trim()){
+      const F = buildFileName_(detail);
+      log_('PUSH_VIRTUAL_SKIP', `Already filled: row=${targetRow} F=${existingF}`);
+      return {success:true, hand_id, row:targetRow, fileName:F, time:hhmmTime, idempotent:true};
+    }
+
+    // 데이터 생성
+    const F = buildFileName_(detail);
+    const H = buildHistoryBlock_(detail, toInt_(bb));
+    const J = buildSubtitleBlock_(detail, head.table_id, bb); // ⭐ v2.5: 자막 생성
+
+    // E/F/G/H/J 열만 업데이트
+    sh.getRange(targetRow, 5).setValue('미완료');  // E열: 상태
+    sh.getRange(targetRow, 6).setValue(F);         // F열: 파일명
+    sh.getRange(targetRow, 7).setValue('A');       // G열: 등급 (항상 A)
+    sh.getRange(targetRow, 8).setValue(H);         // H열: 히스토리
+    sh.getRange(targetRow, 10).setValue(J);        // J열: 자막
+
+    log_('PUSH_VIRTUAL_OK', `hand_id=${hand_id} row=${targetRow} time=${hhmmTime}`);
+
+    return {success:true, hand_id, row:targetRow, fileName:F, time:hhmmTime, idempotent:false};
+  });
+}
+
+/* === ISO 시간 → HH:MM 변환 (v2.5+) === */
+function extractTimeHHMM_(isoString){
+  if(!isoString) return '';
+  try{
+    const date = new Date(isoString);
+    // KST 타임존 적용 (UTC+9)
+    const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+    const hours = String(kstDate.getUTCHours()).padStart(2, '0');
+    const minutes = String(kstDate.getUTCMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }catch(e){
+    log_('TIME_PARSE_ERROR', `Invalid ISO: ${isoString}`);
+    return '';
+  }
+}
+
 /* ===== 외부 포맷(승자 의존 없음) ===== */
 function payloadHeadFrom_(p){
   const b=p.board||{};
@@ -490,6 +620,40 @@ function buildHistoryBlock_(detail, bb){
   const bbLine = pot>0 && bbv>0 ? `${(Math.round((pot/bbv)*10)/10)}BB (${numComma_(pot)})` : `${numComma_(pot)}`;
   const line3 = `팟: ${bbLine}`;
   return `${line1}\n${line2}\n${line3}`;
+}
+
+/* === 자막 생성 (v2.5+) === */
+function buildSubtitleBlock_(detail, tableId, bb){
+  const head = detail.head || {};
+  const stacks = safeParseJson_(head.stacks_json || '{}');
+  const seats = participantsOrdered_(detail);
+  const roster = readRoster_().roster || {};
+  const arr = roster[tableId] || [];
+
+  const lines = [];
+  const bbValue = toInt_(bb) || 1;
+
+  seats.forEach(s => {
+    // TYPE 시트에서 플레이어 찾기
+    const player = arr.find(x => String(x.seat) === String(s));
+    if(!player) return; // TYPE 시트에 없으면 스킵
+
+    // ⭐ Keyplayer 필터링 (Y/TRUE만 자막 출력)
+    const isKey = String(player.keyplayer || '').trim().toUpperCase();
+    if(isKey !== 'Y' && isKey !== 'TRUE') return;
+
+    const name = (player.player || `Seat ${s}`).toUpperCase();
+    const nation = player.nation || '';
+    const stack = toInt_(stacks[s]) || 0;
+    const stackFormatted = numComma_(stack);
+    const bbCount = Math.round(stack / bbValue);
+
+    lines.push(`${name} / ${nation}`);
+    lines.push(`CURRENT STACK - ${stackFormatted} (${bbCount}BB)`);
+    lines.push(''); // 빈 줄
+  });
+
+  return lines.join('\n').trim();
 }
 
 /* === 이름/명부 === */

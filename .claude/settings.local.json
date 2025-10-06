@@ -1,11 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Read(//e/claude/**)",
-      "Bash(git -C e:/claude/HandLogger status --short)",
-      "Bash(git init:*)",
-      "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Read(//c/claude/**)",
+      "Bash(dir:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(npx clasp:*)",
+      "Bash(move PLAN.md docsPLAN.md)",
+      "Bash(move STATUS.md docsSTATUS.md)",
+      "Bash(move CHANGELOG.md docsCHANGELOG.md)",
+      "Bash(move DEPLOY_GUIDE.md docsDEPLOY_GUIDE.md)",
+      "Bash(clasp push:*)",
+      "Bash(git add:*)",
+      "Bash(del nul)",
+      "Bash(git rm:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tracker 스크롤 디자인 비교</title>
+<style>
+body{margin:0;padding:20px;font-family:system-ui;background:#0b0d12;color:#e7eaf0}
+.container{max-width:800px;margin:0 auto}
+h1{color:#a9b8ff;margin-bottom:30px}
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-bottom:40px}
+.option{background:#101522;border:2px solid #2a3249;border-radius:12px;padding:20px}
+.option h2{color:#22c55e;margin-top:0;font-size:18px}
+.phone-frame{width:100%;height:600px;background:#0b0d12;border:3px solid #333;border-radius:20px;overflow:hidden;display:flex;flex-direction:column}
+.header{background:#0f1320;padding:12px 16px;border-bottom:1px solid #222;flex-shrink:0}
+.header strong{color:#2a6fff}
+.content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* Option A - .panel 제거 */
+.optionA .content{padding:8px}
+.optionA .back{background:transparent;border:none;color:#2a6fff;padding:8px;margin-bottom:8px}
+.optionA .title{color:#a9b8ff;font-size:16px;font-weight:700;margin:0 8px 12px}
+.optionA .scroll-area{flex:1;overflow-y:auto;padding:0 8px}
+.optionA .player-row{background:#101522;border:1px solid #1f2435;border-radius:8px;padding:12px;margin-bottom:8px;display:flex;gap:8px;align-items:center}
+
+/* Option B - .panel 내부 스크롤 */
+.optionB .content{padding:8px}
+.optionB .back{background:transparent;border:none;color:#2a6fff;padding:8px;margin-bottom:8px}
+.optionB .panel{background:#101522;border:1px solid #1f2435;border-radius:12px;padding:16px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.optionB .title{color:#a9b8ff;font-size:16px;font-weight:700;margin:0 0 12px;flex-shrink:0}
+.optionB .scroll-area{flex:1;overflow-y:auto;margin:0 -8px;padding:0 8px}
+.optionB .player-row{background:#0b0d12;border:1px solid #2a3249;border-radius:8px;padding:12px;margin-bottom:8px;display:flex;gap:8px;align-items:center}
+
+.seat{font-weight:800;color:#fbbf24;min-width:30px}
+.name{flex:1;font-weight:700}
+.chips{color:#2a6fff;font-weight:800;cursor:pointer}
+.delete{background:transparent;border:none;font-size:18px;cursor:pointer}
+
+.pros-cons{margin-top:16px;padding:12px;background:#0f1320;border-radius:8px;font-size:14px}
+.pros{color:#22c55e}
+.cons{color:#ef4444}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎯 Tracker 테이블 뷰 스크롤 옵션 비교</h1>
+
+  <div class="comparison">
+    <!-- Option A -->
+    <div class="option">
+      <h2>✅ Option A: .panel 제거 (권장)</h2>
+      <div class="phone-frame optionA">
+        <div class="header"><strong>🎯 Tracker</strong></div>
+        <div class="content">
+          <button class="back">← Back</button>
+          <h2 class="title">Table 3</h2>
+          <div class="scroll-area">
+            <div class="player-row">
+              <span class="seat">S1</span>
+              <span class="name">김철수 ⭐</span>
+              <span class="chips">850k</span>
+              <button class="delete">🗑️</button>
+            </div>
+            <div class="player-row">
+              <span class="seat">S2</span>
+              <span class="name">박영희</span>
+              <span class="chips">420k</span>
+              <button class="delete">🗑️</button>
+            </div>
+            <div class="player-row">
+              <span class="seat">S3</span>
+              <span class="name">이민수 ⭐</span>
+              <span class="chips">1200k</span>
+              <button class="delete">🗑️</button>
+            </div>
+            <div class="player-row">
+              <span class="seat">S4</span>
+              <span class="name">정수진</span>
+              <span class="chips">680k</span>
+              <button class="delete">🗑️</button>
+            </div>
+            <div class="player-row">
+              <span class="seat">S5</span>
+              <span class="name">최동욱</span>
+              <span class="chips">550k</span>
+              <button class="delete">🗑️</button>
+            </div>
+            <div class="player-row">
+              <span class="seat">S6</span>
+              <span class="name">강지훈 ⭐</span>
+              <span class="chips">920k</span>
+              <button class="delete">🗑️</button>
+            </div>
+            <div class="player-row">
+              <span class="seat">S7</span>
+              <span class="name">홍길동</span>
+              <span class="chips">340k</span>
+              <button class="delete">🗑️</button>
+            </div>
+            <div class="player-row">
+              <span class="seat">S8</span>
+              <span class="name">윤서아</span>
+              <span class="chips">780k</span>
+              <button class="delete">🗑️</button>
+            </div>
+            <div class="player-row">
+              <span class="seat">S9</span>
+              <span class="name">임태희</span>
+              <span class="chips">610k</span>
+              <button class="delete">🗑️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">✅ 장점:</div>
+        <ul>
+          <li>화면 꽉 참 (세로 공간 100% 활용)</li>
+          <li>코드 단순 (panel 제거)</li>
+          <li>일관된 UX (키 플레이어 뷰와 동일)</li>
+          <li>스크롤 영역 명확</li>
+        </ul>
+        <div class="cons">⚠️ 단점:</div>
+        <ul>
+          <li>배경 구분 약함 (플랫한 디자인)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Option B -->
+    <div class="option">
+      <h2>⚡ Option B: .panel 내부 스크롤</h2>
+      <div class="phone-frame optionB">
+        <div class="header"><strong>🎯 Tracker</strong></div>
+        <div class="content">
+          <button class="back">← Back</button>
+          <div class="panel">
+            <h2 class="title">Table 3</h2>
+            <div class="scroll-area">
+              <div class="player-row">
+                <span class="seat">S1</span>
+                <span class="name">김철수 ⭐</span>
+                <span class="chips">850k</span>
+                <button class="delete">🗑️</button>
+              </div>
+              <div class="player-row">
+                <span class="seat">S2</span>
+                <span class="name">박영희</span>
+                <span class="chips">420k</span>
+                <button class="delete">🗑️</button>
+              </div>
+              <div class="player-row">
+                <span class="seat">S3</span>
+                <span class="name">이민수 ⭐</span>
+                <span class="chips">1200k</span>
+                <button class="delete">🗑️</button>
+              </div>
+              <div class="player-row">
+                <span class="seat">S4</span>
+                <span class="name">정수진</span>
+                <span class="chips">680k</span>
+                <button class="delete">🗑️</button>
+              </div>
+              <div class="player-row">
+                <span class="seat">S5</span>
+                <span class="name">최동욱</span>
+                <span class="chips">550k</span>
+                <button class="delete">🗑️</button>
+              </div>
+              <div class="player-row">
+                <span class="seat">S6</span>
+                <span class="name">강지훈 ⭐</span>
+                <span class="chips">920k</span>
+                <button class="delete">🗑️</button>
+              </div>
+              <div class="player-row">
+                <span class="seat">S7</span>
+                <span class="name">홍길동</span>
+                <span class="chips">340k</span>
+                <button class="delete">🗑️</button>
+              </div>
+              <div class="player-row">
+                <span class="seat">S8</span>
+                <span class="name">윤서아</span>
+                <span class="chips">780k</span>
+                <button class="delete">🗑️</button>
+              </div>
+              <div class="player-row">
+                <span class="seat">S9</span>
+                <span class="name">임태희</span>
+                <span class="chips">610k</span>
+                <button class="delete">🗑️</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons">
+        <div class="pros">✅ 장점:</div>
+        <ul>
+          <li>시각적 그룹핑 (panel 경계 명확)</li>
+          <li>기존 디자인 유지</li>
+        </ul>
+        <div class="cons">⚠️ 단점:</div>
+        <ul>
+          <li>이중 패딩 (panel + scroll-area)</li>
+          <li>코드 복잡 (flexbox 중첩)</li>
+          <li>세로 공간 손실 (panel 여백만큼)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#223266;padding:20px;border-radius:12px;border:2px solid #2a6fff">
+    <h3 style="margin-top:0;color:#2a6fff">💡 핵심 차이점</h3>
+    <table style="width:100%;border-collapse:collapse">
+      <tr style="border-bottom:1px solid #2a3249">
+        <th style="text-align:left;padding:12px;color:#a9b8ff">항목</th>
+        <th style="text-align:left;padding:12px;color:#22c55e">Option A</th>
+        <th style="text-align:left;padding:12px;color:#fbbf24">Option B</th>
+      </tr>
+      <tr style="border-bottom:1px solid #2a3249">
+        <td style="padding:12px">HTML 구조</td>
+        <td style="padding:12px;color:#22c55e">.wrap > #viewTable > 스크롤 영역</td>
+        <td style="padding:12px;color:#fbbf24">.wrap > #viewTable > .panel > 스크롤 영역</td>
+      </tr>
+      <tr style="border-bottom:1px solid #2a3249">
+        <td style="padding:12px">스크롤 위치</td>
+        <td style="padding:12px;color:#22c55e">.wrap 레벨 (전체)</td>
+        <td style="padding:12px;color:#fbbf24">.panel 내부 (부분)</td>
+      </tr>
+      <tr style="border-bottom:1px solid #2a3249">
+        <td style="padding:12px">세로 공간 활용</td>
+        <td style="padding:12px;color:#22c55e">100%</td>
+        <td style="padding:12px;color:#fbbf24">~90% (panel 여백 손실)</td>
+      </tr>
+      <tr style="border-bottom:1px solid #2a3249">
+        <td style="padding:12px">코드 라인</td>
+        <td style="padding:12px;color:#22c55e">-15줄 (단순)</td>
+        <td style="padding:12px;color:#fbbf24">+8줄 (복잡)</td>
+      </tr>
+      <tr>
+        <td style="padding:12px">권장도</td>
+        <td style="padding:12px;color:#22c55e;font-weight:800">⭐⭐⭐⭐⭐</td>
+        <td style="padding:12px;color:#fbbf24;font-weight:800">⭐⭐⭐</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="margin-top:30px;padding:20px;background:#0f1320;border-radius:12px;border-left:4px solid #22c55e">
+    <h3 style="margin-top:0;color:#22c55e">🎯 최종 권장: Option A</h3>
+    <p>Minimal Design 철학에 부합 + 세로 공간 최대 활용 + 코드 단순화</p>
+    <p style="color:#9aa3b2;font-size:14px;margin-bottom:0">
+      키 플레이어 뷰도 동일하게 .panel 제거하면 일관된 UX 구현 가능
+    </p>
+  </div>
+</div>
+</body>
+</html>
