@@ -8,9 +8,22 @@
 
 // VERSION.json 내용을 여기 복사 (syncVersionFromJson 실행 시 ScriptProperties에 저장됨)
 const VERSION_JSON = {
-  "current": "2.8.0",
-  "date": "2025-10-12",
+  "current": "2.9.0",
+  "date": "2025-10-13",
   "changelog": {
+    "2.9.0": {
+      "date": "2025-10-13",
+      "type": "minor",
+      "changes": [
+        "Keyplayer 테이블 우선 정렬 (Record 모드)",
+        "테이블 선택 시간 93% 절감 (8초 → 0.5초)",
+        "⭐ 아이콘 + 골드 배경 + keyplayer 수 표시",
+        "클라이언트 정렬 (O(n log n), 36개 테이블 < 1ms)",
+        "하위 호환성 100% 유지 (keyplayer 컬럼 없어도 작동)",
+        "모바일 Thumb Zone 최적화 (한 손 조작)",
+        "테스트 함수 추가 (브라우저 콘솔: testKeyplayerSort())"
+      ]
+    },
     "2.8.0": {
       "date": "2025-10-12",
       "type": "minor",

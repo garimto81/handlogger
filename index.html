@@ -83,6 +83,19 @@ select,input,button{background:#0f1320;color:var(--text);border:1px solid #2a324
 .seatPill.active{background:#223266;border-color:var(--acc)}
 .seatPill.keyplayer{background:linear-gradient(135deg,#fbbf24,#f59e0b);border-color:#f59e0b;color:#000;font-weight:800}
 
+/* v2.9.0: Keyplayer 테이블 드롭다운 강조 */
+select#tableSel option.keyplayer-option {
+  font-weight: 800;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+}
+
+/* 선택된 keyplayer 테이블 (closed dropdown) */
+select#tableSel:has(option.keyplayer-option:checked) {
+  font-weight: 700;
+  color: #92400e;
+}
+
 /* === Review 2-Panel 레이아웃 (v1.2.0) === */
 #panelReview{display:flex;flex-direction:column;gap:12px}
 #reviewContainer{display:flex;gap:12px;width:100%}
@@ -106,7 +119,7 @@ select,input,button{background:#0f1320;color:var(--text);border:1px solid #2a324
 </head>
 <body>
 <header class="row" style="justify-content:space-between">
-  <div><strong>Poker Hand Logger</strong><span class="muted small"> · 모바일 최적화 · 기여액 기반 · v2.6.0</span></div>
+  <div><strong>Poker Hand Logger</strong><span class="muted small"> · 모바일 최적화 · 기여액 기반 · v2.9.0</span></div>
   <div class="row">
     <button id="modeRecord" type="button" class="btnPrimary">Record</button>
     <button id="modeReview" type="button">Review</button>
@@ -249,6 +262,72 @@ const PERF={};
 function perfStart(label){PERF[label]=performance.now();}
 function perfEnd(label){if(PERF[label])console.log(`[PERF] ${label}: ${(performance.now()-PERF[label]).toFixed(1)}ms`);}
 
+/* ===== v2.9.0: Keyplayer 테이블 우선 정렬 ===== */
+/**
+ * keyplayer가 있는 테이블을 최상단으로 정렬 (Record 모드용)
+ * - keyplayer ≥ 1명: 최상단 그룹 (번호순 정렬)
+ * - keyplayer 0명: 하단 그룹 (번호순 정렬)
+ * - 하위 호환: keyplayer 컬럼 없으면 모든 테이블 일반 처리
+ *
+ * @param {string[]} tables - 테이블 ID 배열 (예: ['1', '15', '2', '23'])
+ * @param {Object} roster - S.roster 객체 {tableId: [{seat, player, keyplayer}, ...]}
+ * @returns {string[]} 정렬된 테이블 배열 (keyplayer 테이블 우선)
+ */
+function sortTablesByKeyplayer(tables, roster) {
+  // 입력 검증
+  if (!tables || !Array.isArray(tables) || tables.length === 0) {
+    return [];
+  }
+
+  // roster 없으면 원본 번호순 정렬 (하위 호환)
+  if (!roster || Object.keys(roster).length === 0) {
+    console.warn('[v2.9.0] sortTablesByKeyplayer: roster 데이터 없음 - 번호순 정렬로 fallback');
+    return tables.slice().sort(sortByNumber_);
+  }
+
+  const withKeyplayer = [];
+  const withoutKeyplayer = [];
+
+  // 각 테이블의 keyplayer 여부 체크
+  tables.forEach(tableId => {
+    const players = roster[tableId] || [];
+
+    // keyplayer 필드 안전 접근 (undefined → false)
+    const hasKeyplayer = players.some(p => p.keyplayer === true);
+
+    if (hasKeyplayer) {
+      withKeyplayer.push(tableId);
+    } else {
+      withoutKeyplayer.push(tableId);
+    }
+  });
+
+  // 각 그룹 내부를 번호순 정렬
+  withKeyplayer.sort(sortByNumber_);
+  withoutKeyplayer.sort(sortByNumber_);
+
+  // keyplayer 테이블 최상단 배치
+  return [...withKeyplayer, ...withoutKeyplayer];
+}
+
+/**
+ * 테이블 번호 기준 정렬 (숫자 변환 지원)
+ * @param {string} a - 테이블 ID
+ * @param {string} b - 테이블 ID
+ * @returns {number} 정렬 순서
+ */
+function sortByNumber_(a, b) {
+  const numA = parseInt(a, 10);
+  const numB = parseInt(b, 10);
+
+  // 숫자 변환 실패 시 문자열 비교
+  if (isNaN(numA) || isNaN(numB)) {
+    return String(a).localeCompare(String(b));
+  }
+
+  return numA - numB;
+}
+
 /* ===== 초기 로딩 ===== */
 perfStart('init');
 const cachedConfig=cacheGet('phl_config');
@@ -257,7 +336,10 @@ else{ google.script.run.withSuccessHandler(d=>{cacheSet('phl_config',d); initFro
 
 function initFromConfig(data){
   perfEnd('init');
-  S.tables=data.tables; S.roster=data.roster; S.cfg=data.config||{};
+  S.roster=data.roster; S.cfg=data.config||{};
+
+  // v2.9.0: keyplayer 테이블 우선 정렬 (Record 모드용)
+  S.tables = sortTablesByKeyplayer(data.tables, S.roster);
   // 설정 복원 (v2.3.0: virtualSheetId는 Review용)
   S.virtualSheetId = localStorage.getItem('phl_virtualSheetId')||'';
   S.bbValue = toInt(localStorage.getItem('phl_bbSize')||'0');
@@ -272,7 +354,20 @@ function initFromConfig(data){
   document.getElementById('virtualMsg').textContent= S.virtualSheetId ? `VIRTUAL 시트 저장됨` : 'VIRTUAL 시트ID를 설정하세요';
 
   const sel=document.getElementById('tableSel');
-  sel.innerHTML = `<option value="">테이블 선택</option>${S.tables.map(t=>`<option value="${t}">${t}</option>`).join('')}`;
+  // v2.9.0: keyplayer 테이블 강조 표시
+  sel.innerHTML = `<option value="">테이블 선택</option>${S.tables.map(t => {
+    const players = S.roster[t] || [];
+    const keyplayerCount = players.filter(p => p.keyplayer === true).length;
+    const isKeyplayer = keyplayerCount > 0;
+
+    // ⭐ 아이콘 + keyplayer 수 표시
+    const label = isKeyplayer
+      ? `⭐ Table ${t} (${keyplayerCount} Key Player${keyplayerCount > 1 ? 's' : ''})`
+      : `Table ${t}`;
+    const className = isKeyplayer ? 'keyplayer-option' : '';
+
+    return `<option value="${t}" class="${className}">${label}</option>`;
+  }).join('')}`;
   sel.onchange=onTableChange;
 
   const streetSel=document.getElementById('streetStart');
@@ -924,6 +1019,64 @@ function sumObj(o){ return Object.values(o||{}).reduce((a,b)=>a+(toInt(b)||0),0)
 function toInt(v){ const n=parseInt(v,10); return isNaN(n)?0:n; }
 function uuid(){ return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)); }
 function safeJson_(s){ try{return typeof s==='string'?JSON.parse(s||'{}'):(s||{});}catch(e){return {}} }
+
+/* ===== v2.9.0: 테스트 함수 (브라우저 콘솔에서 실행) ===== */
+function testKeyplayerSort() {
+  console.log('=== v2.9.0 Keyplayer Sort Test ===');
+
+  // Test 1: 키플레이어 2개 테이블
+  const test1Tables = ['1', '15', '2', '23', '3'];
+  const test1Roster = {
+    '15': [{seat: 1, keyplayer: true}, {seat: 2, keyplayer: false}],
+    '23': [{seat: 1, keyplayer: true}],
+    '1': [{seat: 1, keyplayer: false}],
+    '2': [{seat: 1, keyplayer: false}],
+    '3': [{seat: 1, keyplayer: false}]
+  };
+  const result1 = sortTablesByKeyplayer(test1Tables, test1Roster);
+  const expected1 = ['15', '23', '1', '2', '3'];
+  console.log('Test 1 - 키플레이어 2개 테이블:', result1.join(',') === expected1.join(',') ? '✅ PASS' : '❌ FAIL');
+  console.log('  Expected:', expected1);
+  console.log('  Got:', result1);
+
+  // Test 2: 키플레이어 없음
+  const test2Tables = ['1', '2', '3'];
+  const test2Roster = {
+    '1': [{seat: 1, keyplayer: false}],
+    '2': [{seat: 1, keyplayer: false}],
+    '3': [{seat: 1, keyplayer: false}]
+  };
+  const result2 = sortTablesByKeyplayer(test2Tables, test2Roster);
+  const expected2 = ['1', '2', '3'];
+  console.log('Test 2 - 키플레이어 없음:', result2.join(',') === expected2.join(',') ? '✅ PASS' : '❌ FAIL');
+  console.log('  Expected:', expected2);
+  console.log('  Got:', result2);
+
+  // Test 3: keyplayer 컬럼 없음 (하위 호환)
+  const test3Tables = ['3', '1', '2'];
+  const test3Roster = {
+    '1': [{seat: 1, player: 'Alice', chips: 10000}],
+    '2': [{seat: 1, player: 'Bob'}]
+  };
+  const result3 = sortTablesByKeyplayer(test3Tables, test3Roster);
+  const expected3 = ['1', '2', '3'];
+  console.log('Test 3 - keyplayer 컬럼 없음:', result3.join(',') === expected3.join(',') ? '✅ PASS' : '❌ FAIL');
+  console.log('  Expected:', expected3);
+  console.log('  Got:', result3);
+
+  // Test 4: 빈 배열
+  const result4 = sortTablesByKeyplayer([], test1Roster);
+  console.log('Test 4 - 빈 배열:', result4.length === 0 ? '✅ PASS' : '❌ FAIL');
+
+  // Test 5: roster 없음
+  const result5 = sortTablesByKeyplayer(['3', '1', '2'], {});
+  const expected5 = ['1', '2', '3'];
+  console.log('Test 5 - roster 없음:', result5.join(',') === expected5.join(',') ? '✅ PASS' : '❌ FAIL');
+  console.log('  Expected:', expected5);
+  console.log('  Got:', result5);
+
+  console.log('=== Test Complete ===');
+}
 </script>
 </body>
 </html>
