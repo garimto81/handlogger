@@ -196,25 +196,14 @@ select#tableSel:has(option.keyplayer-option:checked) {
         <button id="newHandBtn" type="button" style="flex:1;">새 핸드</button>
       </div>
 
-      <div class="row" style="margin-top:8px; gap:0;">
-        <button id="commitBtn" type="button" class="btnPrimary"
-                style="flex:1; border-radius:12px 0 0 12px; border-right:1px solid #1a2540;">
+      <div class="row" style="margin-top:8px;">
+        <button id="commitBtn" type="button" class="btnPrimary" style="flex:1;">
           데이터 전송(커밋)
         </button>
-        <button id="sendVirtualRecordBtn" type="button" class="btnPrimary"
-                onclick="sendRecordToVirtual()"
-                style="flex:1; border-radius:0 12px 12px 0; background:#f59e0b; border-color:#f59e0b;">
-          📤 VIRTUAL 전송
-        </button>
       </div>
 
-      <div id="virtualRecordOptions"
-           style="margin-top:6px; font-size:0.7rem; display:flex; gap:4px; flex-wrap:wrap; align-items:center; padding:4px; background:#0e1322; border-radius:4px;">
-      </div>
-
-      <div style="margin-top:4px; display:flex; gap:8px; align-items:center;">
-        <span id="commitMsg" class="small muted" style="flex:1;"></span>
-        <span id="virtualRecordMsg" class="small muted"></span>
+      <div style="margin-top:4px;">
+        <span id="commitMsg" class="small muted"></span>
       </div>
     </div>
   </div>
@@ -504,7 +493,6 @@ function setMode(m){
   const bR=document.getElementById('modeRecord'), bV=document.getElementById('modeReview');
   if(m==='record'){
     rec.classList.remove('hidden'); rev.classList.add('hidden'); bR.classList.add('btnPrimary'); bV.classList.remove('btnPrimary');
-    renderVirtualRecordOptions();
   }
   else{rev.classList.remove('hidden'); rec.classList.add('hidden'); bV.classList.add('btnPrimary'); bR.classList.remove('btnPrimary'); loadList(true);}
 }
@@ -526,7 +514,6 @@ function onTableChange(e){
   }).join('')}`;
   S.btnSeat=btnDefault||null; S.handNo=''; document.getElementById('handNo').value='';
   S.curStreet=S.startStreetInit; resetHandState(false); renderAll();
-  renderVirtualRecordOptions();
 }
 
 /* ===== 핸드 상태 ===== */
@@ -536,7 +523,6 @@ function resetHandState(clearInputs){
   S.curStreet=S.startStreetInit; buildTurnOrder(); renderAll();
   if(clearInputs){
     document.getElementById('commitMsg').textContent='새 핸드 시작';
-    renderVirtualRecordOptions();
     // v3.3.0: 새 핸드 시작 시 hand_no 표시 업데이트
     updateHandNoDisplay();
   }
@@ -700,7 +686,6 @@ function applyAction({seat,action,amt}){
   computeToCall();
   S.actions.push({seq:S.nextSeq++,street:S.curStreet,seat,action,amount_input:toInt(amt)||0,to_call_after:S.toCall,contrib_after_seat:S.contrib[seat],pot_after:S.pot});
   advanceActor(); renderAll();
-  renderVirtualRecordOptions();
   if(isStreetComplete()){
     const nxt=nextStreet(S.curStreet);
     if(nxt){ S.curStreet=nxt; S.acted=new Set(); computeToCall(); buildTurnOrder(); renderAll(); }
@@ -872,126 +857,6 @@ function commitHand(){
       vibrate(HAPTIC.STRONG);
     })
     .saveHand(payload);
-}
-
-/* === Record 탭 VIRTUAL 전송 (v3.2.0) === */
-function renderVirtualRecordOptions(){
-  const container=document.getElementById('virtualRecordOptions');
-
-  if(!S.curTable || !S.activeSeatMap || Object.keys(S.activeSeatMap).filter(k=>S.activeSeatMap[k]).length===0){
-    container.innerHTML='<span style="color:#64748b;">테이블과 참여 좌석을 먼저 설정하세요</span>';
-    document.getElementById('sendVirtualRecordBtn').disabled=true;
-    return;
-  }
-
-  document.getElementById('sendVirtualRecordBtn').disabled=false;
-
-  const head={
-    table_id:S.curTable,
-    stacks_json:JSON.stringify(S.stacks),
-    holes_json:JSON.stringify(S.holes)
-  };
-
-  const participants=extractParticipants(head,S.actions);
-
-  if(participants.length===0){
-    container.innerHTML='<span style="color:#64748b;">참가자 없음</span>';
-    document.getElementById('sendVirtualRecordBtn').disabled=true;
-    return;
-  }
-
-  const defaultBB=S.bbValue||0;
-
-  // v3.3.0: 숫자 포맷팅 적용
-  container.innerHTML=`
-    <label style="display:flex; align-items:center; gap:4px;">
-      <span style="color:#94a3b8;">BB</span>
-      <input type="text" inputmode="numeric" id="bbRecordInput" value="${formatNumber(defaultBB)}" placeholder="1,000"
-             style="width:60px; padding:2px 4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.65rem;">
-    </label>
-    ${participants.map(p=>`
-      <label style="display:flex; align-items:center; gap:2px; font-size:0.65rem;">
-        <input type="checkbox" class="player-select-chk" value="${p.seat}" checked
-               style="width:12px; height:12px; cursor:pointer; accent-color:#3b82f6;">
-        <span style="font-weight:600;">${p.name}</span>
-        <input type="text" inputmode="numeric" class="stack-override-input" data-seat="${p.seat}" value="${formatNumber(p.stack||0)}"
-               style="width:60px; padding:2px 4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.65rem;">
-        <input type="checkbox" class="eliminated-chk" data-seat="${p.seat}"
-               style="width:10px; height:10px; cursor:pointer; accent-color:#ef4444;">
-      </label>
-    `).join('')}
-  `;
-}
-
-function sendRecordToVirtual(){
-  if(!S.virtualSheetId){
-    alert('Review 탭에서 VIRTUAL 시트 ID를 먼저 설정하세요');
-    return;
-  }
-
-  if(!S.curTable){
-    alert('테이블을 선택하세요');
-    return;
-  }
-
-  const selectedSeats=Array.from(document.querySelectorAll('.player-select-chk:checked'))
-    .map(chk=>chk.value);
-
-  if(selectedSeats.length===0){
-    alert('자막에 표시할 플레이어를 최소 1명 이상 선택하세요');
-    return;
-  }
-
-  const eliminatedSeats=Array.from(document.querySelectorAll('.eliminated-chk:checked'))
-    .map(chk=>chk.dataset.seat);
-
-  // v3.3.0: 포맷팅된 값 파싱
-  const stackOverrides={};
-  document.querySelectorAll('.stack-override-input').forEach(input=>{
-    stackOverrides[input.dataset.seat]=parseFormattedNumber(input.value);
-  });
-
-  const bbOverride=parseFormattedNumber(document.getElementById('bbRecordInput').value);
-
-  const payload={
-    selectedSeats,
-    eliminatedSeats,
-    stackOverrides,
-    bbOverride
-  };
-
-  const tempHandId='record_'+Date.now();
-  const btn=document.getElementById('sendVirtualRecordBtn');
-  const msg=document.getElementById('virtualRecordMsg');
-
-  btn.disabled=true;
-  btn.textContent='전송 중...';
-  msg.textContent='';
-
-  google.script.run
-    .withSuccessHandler(res=>{
-      btn.disabled=false;
-      btn.innerHTML='📤 VIRTUAL 전송';
-
-      if(res && res.success){
-        msg.textContent=`✅ Row ${res.row}`;
-        msg.style.color='#22c55e';
-        vibrate(HAPTIC.STRONG);
-      }else{
-        msg.textContent=`❌ 실패`;
-        msg.style.color='#ef4444';
-      }
-
-      setTimeout(()=>{msg.textContent=''; msg.style.color='';},3000);
-    })
-    .withFailureHandler(err=>{
-      btn.disabled=false;
-      btn.innerHTML='📤 VIRTUAL 전송';
-      msg.textContent=`❌ ${err.message||err}`;
-      msg.style.color='#ef4444';
-      setTimeout(()=>{msg.textContent=''; msg.style.color='';},3000);
-    })
-    .sendHandToVirtual(tempHandId,S.virtualSheetId,payload);
 }
 
 /* v3.0.0: 핸드 상세에서 VIRTUAL 전송 (복수 플레이어 선택 + 탈락 + 스택 수정) */
