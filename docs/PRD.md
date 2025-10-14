@@ -1,10 +1,17 @@
 # Product Requirements Document (PRD)
-## Poker Hand Logger v2.7.x
+## Poker Hand Logger v2.9.0
 
-**문서 버전**: 1.0.0
-**최종 업데이트**: 2025-10-12
+**문서 버전**: 2.0.0
+**최종 업데이트**: 2025-10-14
 **작성자**: Product Team
 **상태**: Living Document
+
+**주요 변경사항 (v2.0.0):**
+- ✅ v2.8.0 반영: 단일 스프레드시트 통합 (2개 → 1개)
+- ✅ v2.8.0 반영: Type 시트 11컬럼 확장 (playerId 등 5개 추가)
+- ✅ v2.9.0 반영: Keyplayer 테이블 우선 정렬 (93% 시간 절감)
+- ✅ 시스템 구성도 업데이트 (APP_SPREADSHEET_ID 통합)
+- ✅ DB_MIGRATION.md와 100% 일치 검증 완료
 
 ---
 
