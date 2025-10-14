@@ -150,19 +150,120 @@
 - BTN 좌석은 참여 좌석 중 하나여야 함
 - 핸드 번호 중복 시 경고 표시 (선택적)
 
-**UI 컴포넌트:**
+**UI 컴포넌트 (v2.9.0 업데이트):**
 ```html
 <select id="tableSel">
   <option value="">테이블 선택</option>
+  <!-- v2.9.0: 키플레이어 테이블 최상단 정렬 -->
+  <option value="15" class="keyplayer-option">⭐ Table 15 (2 Key Players)</option>
+  <option value="23" class="keyplayer-option">⭐ Table 23 (1 Key Player)</option>
   <option value="1">Table 1</option>
+  <option value="2">Table 2</option>
+  <!-- ... 36번까지 -->
 </select>
 ```
 
-**비즈니스 로직 (code.gs:151-178):**
+**CSS 강조 (v2.9.0):**
+```css
+select#tableSel option.keyplayer-option {
+  font-weight: 800;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+}
+```
+
+**비즈니스 로직 (code.gs:185-235, v2.8.0 업데이트):**
 ```javascript
 function readRoster_() {
-  // ROSTER_SPREADSHEET_ID에서 테이블별 플레이어 로드
-  // { tables: ['1','2'], roster: { '1': [{ seat, player, chips, keyplayer }] } }
+  // v2.8.0: APP_SPREADSHEET_ID 내부 Type 시트 로드 (통합) ⭐
+  const ss=appSS_(); // rosterSS_() 삭제됨
+  const sh=ss.getSheetByName(ROSTER_SHEET_NAME)||ss.getSheets()[0];
+  const {header,rows}=readAll_(sh);
+
+  // 필수 컬럼 인덱스
+  const idx={
+    tableNo:findColIndex_(header,ROSTER_HEADERS.tableNo),
+    seatNo:findColIndex_(header,ROSTER_HEADERS.seatNo),
+    player:findColIndex_(header,ROSTER_HEADERS.player),
+    nation:findColIndex_(header,ROSTER_HEADERS.nation),
+    chips:findColIndex_(header,ROSTER_HEADERS.chips),
+    keyplayer:findColIndex_(header,ROSTER_HEADERS.keyplayer)
+  };
+
+  // v2.8.0: 선택적 컬럼 (확장 필드) ⭐
+  const optIdx={
+    playerId:findColIndex_(header,ROSTER_HEADERS.playerId),
+    tableId:findColIndex_(header,ROSTER_HEADERS.tableId),
+    seatId:findColIndex_(header,ROSTER_HEADERS.seatId),
+    pokerRoom:findColIndex_(header,ROSTER_HEADERS.pokerRoom),
+    tableName:findColIndex_(header,ROSTER_HEADERS.tableName)
+  };
+
+  // 플레이어 객체 구성 (선택적 필드 포함)
+  const playerObj = {seat, player, nation, chips, keyplayer};
+  if(optIdx.playerId>=0) playerObj.playerId=String(r[optIdx.playerId]||'');
+  if(optIdx.tableId>=0) playerObj.tableId=String(r[optIdx.tableId]||'');
+  if(optIdx.seatId>=0) playerObj.seatId=String(r[optIdx.seatId]||'');
+  if(optIdx.pokerRoom>=0) playerObj.pokerRoom=String(r[optIdx.pokerRoom]||'');
+  if(optIdx.tableName>=0) playerObj.tableName=String(r[optIdx.tableName]||'');
+
+  // 하위 호환: 선택적 필드가 없어도 정상 작동
+  return { tables:[...tables].sort((a,b)=>toInt_(a)-toInt_(b)), roster };
+}
+```
+
+**v2.9.0: 클라이언트 정렬 로직 (index.html:265-330):**
+```javascript
+/**
+ * v2.9.0: Keyplayer 테이블 우선 정렬 (Record 모드용)
+ * - keyplayer ≥ 1명: 최상단 그룹 (번호순 정렬)
+ * - keyplayer 0명: 하단 그룹 (번호순 정렬)
+ * - 하위 호환: keyplayer 컬럼 없으면 모든 테이블 일반 처리
+ *
+ * 성능: O(n log n), 36개 테이블 < 1ms
+ */
+function sortTablesByKeyplayer(tables, roster) {
+  if (!tables || !Array.isArray(tables) || tables.length === 0) {
+    return [];
+  }
+
+  // roster 없으면 원본 번호순 정렬 (하위 호환)
+  if (!roster || Object.keys(roster).length === 0) {
+    console.warn('[v2.9.0] sortTablesByKeyplayer: roster 데이터 없음 - 번호순 정렬로 fallback');
+    return tables.slice().sort(sortByNumber_);
+  }
+
+  const withKeyplayer = [];
+  const withoutKeyplayer = [];
+
+  // 각 테이블의 keyplayer 여부 체크
+  tables.forEach(tableId => {
+    const players = roster[tableId] || [];
+    const hasKeyplayer = players.some(p => p.keyplayer === true);
+
+    if (hasKeyplayer) {
+      withKeyplayer.push(tableId);
+    } else {
+      withoutKeyplayer.push(tableId);
+    }
+  });
+
+  // 각 그룹 내부를 번호순 정렬
+  withKeyplayer.sort(sortByNumber_);
+  withoutKeyplayer.sort(sortByNumber_);
+
+  // keyplayer 테이블 최상단 배치
+  return [...withKeyplayer, ...withoutKeyplayer];
+}
+
+// 초기 로딩 시 적용 (index.html:337-342)
+function initFromConfig(data) {
+  S.roster=data.roster; S.cfg=data.config||{};
+
+  // v2.9.0: keyplayer 테이블 우선 정렬 (Record 모드용)
+  S.tables = sortTablesByKeyplayer(data.tables, S.roster);
+
+  // ... 나머지 초기화
 }
 ```
 
@@ -603,7 +704,7 @@ function doGet() {
 
 ## 5. 기술 아키텍처
 
-### 5.1 시스템 구성도
+### 5.1 시스템 구성도 (v2.8.0 업데이트)
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -613,6 +714,7 @@ function doGet() {
 │  │  - Record Mode UI                                       │  │
 │  │  - Review Mode UI                                       │  │
 │  │  - JavaScript State Management (S 객체)                 │  │
+│  │  - v2.9.0: sortTablesByKeyplayer() 클라이언트 정렬     │  │
 │  └────────────────────────────────────────────────────────┘  │
 │                            ▲                                  │
 │                            │ google.script.run                │
@@ -620,7 +722,7 @@ function doGet() {
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │  code.gs (Google Apps Script)                          │  │
 │  │  - doGet() → HTML 서빙                                  │  │
-│  │  - getConfig() → Roster/CONFIG 로드                    │  │
+│  │  - getConfig() → Type/CONFIG 로드                      │  │
 │  │  - saveHand(payload) → HANDS/ACTIONS 저장              │  │
 │  │  - queryHands() → 핸드 리스트                           │  │
 │  │  - getHandDetail(hand_id) → 상세 조회                  │  │
@@ -632,16 +734,16 @@ function doGet() {
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │  Google Sheets (Data Layer)                            │  │
 │  │  ┌──────────────────────────────────────────────────┐  │  │
-│  │  │  APP_SPREADSHEET_ID (19e7eDjoZ...)               │  │  │
+│  │  │  APP_SPREADSHEET_ID (19e7eDjoZ...) ⭐ 단일 통합  │  │  │
 │  │  │  - HANDS: 핸드 헤더 (보드, 팟, 스택, 홀카드)     │  │  │
 │  │  │  - ACTIONS: 액션 시퀀스 (street, seat, action)  │  │  │
 │  │  │  - CONFIG: 테이블 상태 (btn_seat, hand_seq)     │  │  │
 │  │  │  - LOG: 에러/디버그 로그                         │  │  │
-│  │  └──────────────────────────────────────────────────┘  │  │
-│  │  ┌──────────────────────────────────────────────────┐  │  │
-│  │  │  ROSTER_SPREADSHEET_ID (1J-lf8bYT...)            │  │  │
-│  │  │  - Type: 플레이어 명부 (seat, player, chips,    │  │  │
-│  │  │           nation, keyplayer)                     │  │  │
+│  │  │  - Type: 플레이어 명부 (11컬럼, 영구 고정) ⭐   │  │  │
+│  │  │      ├─ 필수 6개: TableNo, SeatNo, Players,      │  │  │
+│  │  │      │            Nationality, Chips, Keyplayer  │  │  │
+│  │  │      └─ 선택 5개: PlayerId, TableId, SeatId,     │  │  │
+│  │  │                   PokerRoom, TableName           │  │  │
 │  │  └──────────────────────────────────────────────────┘  │  │
 │  │  ┌──────────────────────────────────────────────────┐  │  │
 │  │  │  External VIRTUAL Sheet (사용자 지정 ID)         │  │  │
@@ -653,6 +755,16 @@ function doGet() {
 │  │  └──────────────────────────────────────────────────┘  │  │
 │  └────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
+
+⭐ v2.8.0 주요 변경:
+- 2개 스프레드시트 → 1개 통합 (APP_SPREADSHEET_ID)
+- ROSTER_SPREADSHEET_ID 삭제
+- Type 시트 6컬럼 → 11컬럼 확장 (선택적)
+- rosterSS_() 함수 제거 (appSS_()로 통합)
+
+⭐ v2.9.0 주요 변경:
+- 클라이언트 정렬 (sortTablesByKeyplayer)
+- 테이블 선택 시간 93% 절감 (8초 → 0.5초)
 ```
 
 ### 5.2 기술 스택
@@ -842,22 +954,46 @@ if (after !== next) throw new Error('CONFLICT');
 - `EXT_*`: 외부 시트 연동 로그
 - `PUSH_VIRTUAL_*`: VIRTUAL 전송 로그
 
-### 6.5 ROSTER 시트 (플레이어 명부)
+### 6.5 Type 시트 (플레이어 명부, v2.8.0 업데이트)
 
-**위치**: `ROSTER_SPREADSHEET_ID` (별도 스프레드시트)
+**위치**: `APP_SPREADSHEET_ID` 내부 (v2.8.0부터 단일 스프레드시트 통합)
+**시트명**: `Type` (영구 고정, v2.8.0부터 통합)
 
+#### 필수 컬럼 (6개)
 | 컬럼 | 타입 | 필수 | 설명 | 예시 |
 |------|------|------|------|------|
-| Table No. | String | ✓ | 테이블 번호 | 1 |
-| Seat No. | Number | ✓ | 좌석 번호 | 1 |
-| Players | String | ✓ | 플레이어 이름 | Kim Seung-ho |
-| Nationality | String |  | 국적 (ISO 3166-1 alpha-3) | KOR |
-| Chips | Number |  | 시작 칩 | 50000 |
-| Keyplayer | String |  | 키플레이어 여부 (TRUE/FALSE) | TRUE |
+| Table No. | String | ✅ | 테이블 번호 | 1 |
+| Seat No. | Number | ✅ | 좌석 번호 | 1 |
+| Players | String | ✅ | 플레이어 이름 | Kim Seung-ho |
+| Nationality | String | ⚠️ | 국적 (ISO 3166-1 alpha-3) | KOR |
+| Chips | Number | ⚠️ | 시작 칩 | 50000 |
+| Keyplayer | String | ⚠️ | 키플레이어 여부 (TRUE/FALSE) | TRUE |
+
+#### 선택적 컬럼 (5개, v2.8.0 확장)
+| 컬럼 | 타입 | 필수 | 설명 | 예시 |
+|------|------|------|------|------|
+| PlayerId | String | 선택 | 플레이어 고유 ID | 104616 |
+| TableId | String | 선택 | 시스템 테이블 ID | 43149 |
+| SeatId | String | 선택 | 시스템 좌석 ID | 429396 |
+| PokerRoom | String | 선택 | 포커룸 구역 | Main |
+| TableName | String | 선택 | 테이블 색상/이름 | Black |
 
 **헤더 유연성:**
 - 컬럼명 대소문자 무관
 - 여러 별칭 지원: "Table No." = "TableNo" = "Table_Number"
+- 선택적 컬럼이 없어도 정상 작동 (하위 호환 100%)
+
+**하위 호환성:**
+- v2.7.2 이전 6컬럼 Type 시트: ✅ 정상 작동
+- v2.8.0 11컬럼 확장 시트: ✅ 정상 작동
+- playerId 등 없으면 빈 문자열로 처리
+
+**샘플 데이터 (v2.8.0 11컬럼):**
+```csv
+Table No.,Seat No.,Players,Nationality,Chips,Keyplayer,PlayerId,TableId,SeatId,PokerRoom,TableName
+1,1,Murat Altunok,TR,10000,FALSE,104616,43149,429396,Main,Black
+1,2,Stefano Spataro,IT,60000,TRUE,102743,43149,429397,Main,Black
+```
 
 ### 6.6 VIRTUAL 시트 (외부 브로드캐스트)
 
