@@ -143,7 +143,7 @@ select#tableSel:has(option.keyplayer-option:checked) {
     <div class="panel" style="background:#0e1322; margin-bottom:10px">
       <div class="row settings small">
         <label>Big Blind(원)</label>
-        <input id="bbInput" type="number" inputmode="numeric" placeholder="예: 1000"/>
+        <input id="bbInput" type="text" inputmode="numeric" placeholder="예: 1,000"/>
         <button id="saveSettingsBtn" type="button">설정 저장</button>
       </div>
       <div class="small muted" id="settingsMsg"></div>
@@ -162,7 +162,7 @@ select#tableSel:has(option.keyplayer-option:checked) {
         </select>
       </div>
       <div><label>BTN 좌석</label><select id="btnSeat"></select></div>
-      <div style="grid-column:1/-1"><label>선 누적 팟(pre_pot, 선택)</label><input type="number" id="prePot" placeholder="예: 12500" style="width:100%"/></div>
+      <div style="grid-column:1/-1"><label>선 누적 팟(pre_pot, 선택)</label><input type="text" inputmode="numeric" id="prePot" placeholder="예: 12,500" style="width:100%"/></div>
     </div>
 
     <div style="margin-top:10px">
@@ -367,9 +367,24 @@ function initFromConfig(data){
   // 설정 복원 (v2.3.0: virtualSheetId는 Review용)
   S.virtualSheetId = localStorage.getItem('phl_virtualSheetId')||'';
   S.bbValue = toInt(localStorage.getItem('phl_bbSize')||'0');
-  document.getElementById('bbInput').value=S.bbValue||'';
+
+  // v3.3.0: BB 입력 포맷팅
+  const bbInput = document.getElementById('bbInput');
+  bbInput.value = S.bbValue ? formatNumber(S.bbValue) : '';
+  bbInput.addEventListener('input', e => {
+    const cursorPos = e.target.selectionStart;
+    const oldLen = e.target.value.length;
+    const cleaned = parseFormattedNumber(e.target.value);
+    const formatted = cleaned > 0 ? formatNumber(cleaned) : '';
+    e.target.value = formatted;
+    // 커서 위치 보정 (콤마 추가로 인한 이동)
+    const newLen = formatted.length;
+    const diff = newLen - oldLen;
+    e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
+  });
+
   document.getElementById('saveSettingsBtn').onclick=saveSettings_;
-  document.getElementById('settingsMsg').textContent= S.bbValue ? `BB=${S.bbValue}` : 'BB를 설정하세요';
+  document.getElementById('settingsMsg').textContent= S.bbValue ? `BB=${formatNumber(S.bbValue)}` : 'BB를 설정하세요';
 
   // Review 모드 VIRTUAL 설정 (v3.0.0: 전송 버튼 제거, 설정만 유지)
   document.getElementById('virtualSheetId').value=S.virtualSheetId;
@@ -397,7 +412,23 @@ function initFromConfig(data){
   streetSel.onchange=e=>{ S.startStreetInit=e.target.value; S.curStreet=S.startStreetInit; resetHandState(false); renderAll(); };
 
   document.getElementById('btnSeat').onchange=e=>{S.btnSeat=toInt(e.target.value); buildTurnOrder(); renderAll();};
-  document.getElementById('prePot').oninput=e=>{S.prePot=toInt(e.target.value); S.pot=S.prePot+sumObj(S.contrib); renderPot();};
+
+  // v3.3.0: prePot 포맷팅
+  const prePotInput = document.getElementById('prePot');
+  prePotInput.addEventListener('input', e => {
+    const cursorPos = e.target.selectionStart;
+    const oldLen = e.target.value.length;
+    const cleaned = parseFormattedNumber(e.target.value);
+    const formatted = cleaned > 0 ? formatNumber(cleaned) : '';
+    e.target.value = formatted;
+    S.prePot = cleaned;
+    S.pot = S.prePot + sumObj(S.contrib);
+    renderPot();
+    // 커서 위치 보정
+    const newLen = formatted.length;
+    const diff = newLen - oldLen;
+    e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
+  });
   // v3.3.0: handNo 입력 필드 - 자동 채움 + 수동 수정 가능
   const handNoInput = document.getElementById('handNo');
   handNoInput.oninput = e => {
@@ -454,9 +485,10 @@ function updateHandNoDisplay() {
 }
 
 function saveSettings_(){
-  S.bbValue = toInt(document.getElementById('bbInput').value||'0');
+  // v3.3.0: 포맷팅된 입력값 파싱
+  S.bbValue = parseFormattedNumber(document.getElementById('bbInput').value||'0');
   localStorage.setItem('phl_bbSize', S.bbValue);
-  document.getElementById('settingsMsg').textContent='저장됨';
+  document.getElementById('settingsMsg').textContent=`저장됨 (BB=${formatNumber(S.bbValue)})`;
   setTimeout(()=>document.getElementById('settingsMsg').textContent='',1500);
 }
 
@@ -582,10 +614,13 @@ function renderStackGrid(){
   S.seats.filter(s=>S.activeSeatMap[s.seat]).forEach(s=>{
     const [c1,c2]=(S.holes[s.seat]||['','']);
     const wrap=document.createElement('div'); wrap.className='seatCard';
+    // v3.3.0: stack 값 포맷팅
+    const stackVal = S.stacks[s.seat];
+    const displayVal = stackVal ? formatNumber(stackVal) : '';
     wrap.innerHTML = `
       <div class="small"><span class="playerName">${seatNameOnly(s.seat,s.name)}</span></div>
       <div class="row">
-        <input type="number" placeholder="stack(선택)" value="${S.stacks[s.seat]??''}" oninput="S_setStack(${s.seat}, this.value)" />
+        <input type="text" inputmode="numeric" class="stack-input" data-seat="${s.seat}" placeholder="stack(선택)" value="${displayVal}" />
       </div>
       <div class="row small" style="margin-top:6px">
         <span class="muted">홀카드:</span>
@@ -595,9 +630,25 @@ function renderStackGrid(){
         </span>
       </div>`;
     grid.appendChild(wrap);
+
+    // v3.3.0: stack 입력 포맷팅 이벤트
+    const input = wrap.querySelector('.stack-input');
+    input.addEventListener('input', e => {
+      const seat = toInt(e.target.dataset.seat);
+      const cursorPos = e.target.selectionStart;
+      const oldLen = e.target.value.length;
+      const cleaned = parseFormattedNumber(e.target.value);
+      const formatted = cleaned > 0 ? formatNumber(cleaned) : '';
+      e.target.value = formatted;
+      S.stacks[seat] = cleaned;
+      // 커서 위치 보정
+      const newLen = formatted.length;
+      const diff = newLen - oldLen;
+      e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
+    });
   });
 }
-window.S_setStack=(seat,v)=>{ S.stacks[seat]=toInt(v); };
+window.S_setStack=(seat,v)=>{ S.stacks[seat]=parseFormattedNumber(v); };
 
 function renderActionPad(){
   const pad=document.getElementById('actionPad'); pad.innerHTML='';
@@ -608,7 +659,11 @@ function renderActionPad(){
   });
 }
 function renderTurnSeat(){ document.getElementById('turnSeat').textContent=currentActorSeat()?('Seat '+currentActorSeat()):'-'; }
-function renderPot(){ document.getElementById('toCall').textContent=S.toCall; document.getElementById('pot').textContent=S.pot; }
+function renderPot(){
+  // v3.3.0: 숫자 포맷팅 적용
+  document.getElementById('toCall').textContent=formatNumber(S.toCall);
+  document.getElementById('pot').textContent=formatNumber(S.pot);
+}
 function currentActorSeat(){ if(S.order.length===0) return null; return S.order[S.actorIdx%S.order.length]; }
 
 function renderFeed(){
@@ -847,19 +902,20 @@ function renderVirtualRecordOptions(){
 
   const defaultBB=S.bbValue||0;
 
+  // v3.3.0: 숫자 포맷팅 적용
   container.innerHTML=`
     <label style="display:flex; align-items:center; gap:4px;">
       <span style="color:#94a3b8;">BB</span>
-      <input type="number" id="bbRecordInput" value="${defaultBB}" placeholder="1k"
-             style="width:50px; padding:2px 4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.65rem;">
+      <input type="text" inputmode="numeric" id="bbRecordInput" value="${formatNumber(defaultBB)}" placeholder="1,000"
+             style="width:60px; padding:2px 4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.65rem;">
     </label>
     ${participants.map(p=>`
       <label style="display:flex; align-items:center; gap:2px; font-size:0.65rem;">
         <input type="checkbox" class="player-select-chk" value="${p.seat}" checked
                style="width:12px; height:12px; cursor:pointer; accent-color:#3b82f6;">
         <span style="font-weight:600;">${p.name}</span>
-        <input type="number" class="stack-override-input" data-seat="${p.seat}" value="${p.stack||0}"
-               style="width:50px; padding:2px 4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.65rem;">
+        <input type="text" inputmode="numeric" class="stack-override-input" data-seat="${p.seat}" value="${formatNumber(p.stack||0)}"
+               style="width:60px; padding:2px 4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.65rem;">
         <input type="checkbox" class="eliminated-chk" data-seat="${p.seat}"
                style="width:10px; height:10px; cursor:pointer; accent-color:#ef4444;">
       </label>
@@ -889,12 +945,13 @@ function sendRecordToVirtual(){
   const eliminatedSeats=Array.from(document.querySelectorAll('.eliminated-chk:checked'))
     .map(chk=>chk.dataset.seat);
 
+  // v3.3.0: 포맷팅된 값 파싱
   const stackOverrides={};
   document.querySelectorAll('.stack-override-input').forEach(input=>{
-    stackOverrides[input.dataset.seat]=toInt(input.value);
+    stackOverrides[input.dataset.seat]=parseFormattedNumber(input.value);
   });
 
-  const bbOverride=toInt(document.getElementById('bbRecordInput').value);
+  const bbOverride=parseFormattedNumber(document.getElementById('bbRecordInput').value);
 
   const payload={
     selectedSeats,
@@ -956,16 +1013,16 @@ function sendCurrentHandToVirtual(){
   const eliminatedSeats = Array.from(document.querySelectorAll('.eliminated-chk:checked'))
     .map(chk => chk.dataset.seat);
 
-  // 3. 수정된 스택 값 수집
+  // 3. 수정된 스택 값 수집 (v3.3.0: 포맷팅된 값 파싱)
   const stackOverrides = {};
   document.querySelectorAll('.stack-override-input').forEach(input => {
     const seat = input.dataset.seat;
-    const value = toInt(input.value);
+    const value = parseFormattedNumber(input.value);
     stackOverrides[seat] = value;
   });
 
-  // 4. 수정된 BB 값
-  const bbOverride = toInt(document.getElementById('bbOverrideInput').value);
+  // 4. 수정된 BB 값 (v3.3.0: 포맷팅된 값 파싱)
+  const bbOverride = parseFormattedNumber(document.getElementById('bbOverrideInput').value);
 
   // 5. payload 구성
   const payload = {
@@ -1284,21 +1341,22 @@ function renderVirtualSection(handId, participants){
     chunks.push(participants.slice(i, i + chunkSize));
   }
 
+  // v3.3.0: 숫자 포맷팅 적용
   return `
     <div style="margin-top:8px; padding:8px; background:#0e1322; border-radius:4px; border:1px solid #1e293b;">
       <div style="font-size:0.7rem; margin-bottom:6px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
         <label style="display:flex; align-items:center; gap:4px;">
           <span style="color:#94a3b8;">BB</span>
-          <input type="number" id="bbOverrideInput" value="${defaultBB}" placeholder="1k"
-                 style="width:60px; padding:3px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.7rem;">
+          <input type="text" inputmode="numeric" id="bbOverrideInput" value="${formatNumber(defaultBB)}" placeholder="1,000"
+                 style="width:70px; padding:3px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.7rem;">
         </label>
         ${chunks.map((chunk, chunkIdx) => chunk.map(p => `
           <label style="display:flex; align-items:center; gap:3px; font-size:0.7rem;">
             <input type="checkbox" class="player-select-chk" value="${p.seat}" checked
                    style="width:14px; height:14px; cursor:pointer; accent-color:#3b82f6;">
             <span style="font-weight:600;">${p.name}</span>
-            <input type="number" class="stack-override-input" data-seat="${p.seat}" value="${p.stack || 0}" placeholder="0"
-                   style="width:60px; padding:3px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.7rem;">
+            <input type="text" inputmode="numeric" class="stack-override-input" data-seat="${p.seat}" value="${formatNumber(p.stack || 0)}" placeholder="0"
+                   style="width:70px; padding:3px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.7rem;">
             <input type="checkbox" class="eliminated-chk" data-seat="${p.seat}"
                    style="width:12px; height:12px; cursor:pointer; accent-color:#ef4444;">
           </label>
@@ -1351,6 +1409,17 @@ function sumObj(o){ return Object.values(o||{}).reduce((a,b)=>a+(toInt(b)||0),0)
 function toInt(v){ const n=parseInt(v,10); return isNaN(n)?0:n; }
 function uuid(){ return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)); }
 function safeJson_(s){ try{return typeof s==='string'?JSON.parse(s||'{}'):(s||{});}catch(e){return {}} }
+
+/* v3.3.0: 숫자 포맷팅 (3자리마다 콤마) */
+function formatNumber(num){
+  const n = toInt(num);
+  return n.toLocaleString('en-US');
+}
+function parseFormattedNumber(str){
+  if(!str) return 0;
+  const cleaned = String(str).replace(/,/g, '');
+  return toInt(cleaned);
+}
 
 /* ===== v2.9.0: 테스트 함수 (브라우저 콘솔에서 실행) ===== */
 function testKeyplayerSort() {
