@@ -17,3 +17,12 @@ Thumbs.db
 *.tmp
 ~$*
 node_modules
+
+# Debug files
+DEBUG_*.js
+DEBUG_*.gs
+TEST_*.gs
+
+# Archive
+archive/
+dist/

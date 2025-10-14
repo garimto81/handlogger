@@ -1,20 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Read(//c/claude/**)",
-      "Bash(dir:*)",
-      "Bash(node:*)",
-      "Bash(npm:*)",
-      "Bash(npx clasp:*)",
-      "Bash(move PLAN.md docsPLAN.md)",
-      "Bash(move STATUS.md docsSTATUS.md)",
-      "Bash(move CHANGELOG.md docsCHANGELOG.md)",
-      "Bash(move DEPLOY_GUIDE.md docsDEPLOY_GUIDE.md)",
-      "Bash(clasp push:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(mkdir:*)",
       "Bash(git add:*)",
-      "Bash(del nul)",
-      "Bash(git rm:*)",
-      "Bash(git rebase:*)"
+      "Bash(git push:*)",
+      "Bash(git restore:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []
