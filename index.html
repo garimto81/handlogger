@@ -1,4 +1,4 @@
-<!-- index — Poker Hand Logger — v2.9.0 (2025-10-13) -->
+<!-- index — Poker Hand Logger — v3.3.0 (2025-01-15) -->
 <!doctype html>
 <html lang="ko">
 <head>
@@ -47,22 +47,23 @@ select,input,button{background:#0f1320;color:var(--text);border:1px solid #2a324
 #overlay.show .box{transform:translateY(0)}
 .logbox{max-height:22vh;overflow:auto;border:1px solid #1b2133;border-radius:10px;padding:8px;background:#0e1320}
 
-/* === Review 배지 & 보드 === */
-.badgeRow{display:flex;flex-direction:column;gap:8px}
-.cardBadge{display:inline-flex;align-items:center;justify-content:center;min-width:68px;height:68px;padding:0 12px;border-radius:12px;border:6px solid #2a3249;background:#ffffff;font-weight:900;font-size:1.25rem}
-.cb-s{border-color:#111111;color:#111111} /* spade = black */
-.cb-h{border-color:#ef4444;color:#ef4444} /* heart = red */
-.cb-d{border-color:#3b82f6;color:#3b82f6} /* diamond = blue*/
-.cb-c{border-color:#22c55e;color:#22c55e} /* club = green */
-.actBadge{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:3px solid;font-weight:800;width:fit-content}
-.act-chk{border-color:#22c55e;background:rgba(34,197,94,.15);color:#eafff0}
-.act-call{border-color:#22c55e;background:rgba(34,197,94,.15);color:#eafff0}
-.act-bet{border-color:#ef4444;background:rgba(239,68,68,.15);color:#ffe3e3}
-.act-raise{border-color:#ef4444;background:rgba(239,68,68,.15);color:#ffe3e3}
-.act-fold{border-color:#3b82f6;background:rgba(59,130,246,.15);color:#e6f0ff}
-.act-allin{border-color:#b91c1c;background:rgba(185,28,28,.2);color:#ffe5e5}
-.streetTitle{margin:10px 0 4px;font-weight:900;color:#a9b8ff}
-.playerName{font-weight:800}
+/* === Review 배지 & 보드 (v3.1.0: 밀도 최적화) === */
+.badgeRow{display:flex;flex-wrap:wrap;gap:4px}
+.cardBadge{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 4px;border-radius:6px;border:2px solid;background:#ffffff;font-weight:700;font-size:0.85rem}
+.cb-s{border-color:#111111;color:#111111}
+.cb-h{border-color:#ef4444;color:#ef4444}
+.cb-d{border-color:#ef4444;color:#ef4444}
+.cb-c{border-color:#111111;color:#111111}
+.actBadge{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid;font-weight:600;font-size:0.75rem;white-space:nowrap}
+.act-chk{border-color:#22c55e;background:rgba(34,197,94,.1);color:#86efac}
+.act-call{border-color:#22c55e;background:rgba(34,197,94,.1);color:#86efac}
+.act-bet{border-color:#ef4444;background:rgba(239,68,68,.1);color:#fca5a5}
+.act-raise{border-color:#ef4444;background:rgba(239,68,68,.1);color:#fca5a5}
+.act-fold{border-color:#3b82f6;background:rgba(59,130,246,.1);color:#93c5fd}
+.act-allin{border-color:#b91c1c;background:rgba(185,28,28,.15);color:#fca5a5}
+.streetTitle{margin:8px 0 2px;font-weight:700;font-size:0.8rem;color:#94a3b8;cursor:pointer;user-select:none}
+.streetTitle:hover{color:#a9b8ff}
+.playerName{font-weight:700}
 
 /* 설정 토글 */
 .settings{display:flex;gap:8px;align-items:center}
@@ -96,30 +97,38 @@ select#tableSel:has(option.keyplayer-option:checked) {
   color: #92400e;
 }
 
-/* === Review 2-Panel 레이아웃 (v1.2.0) === */
-#panelReview{display:flex;flex-direction:column;gap:12px}
-#reviewContainer{display:flex;gap:12px;width:100%}
-#list{flex:0 0 40%;max-height:75vh;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:8px;background:#0e1320}
-#detail{flex:1;max-height:75vh;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:12px;background:#0e1320}
+/* === Review 2-Panel 레이아웃 (v3.0.0: 9:16 최적화) === */
+#panelReview{display:flex;flex-direction:column;gap:12px;height:100%}
+#reviewContainer{display:flex;gap:12px;width:100%;height:calc(100vh - 200px);overflow:hidden}
+#list{flex:0 0 35%;height:100%;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:8px;background:#0e1320}
+#detail{flex:1;height:100%;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:12px;background:#0e1320;scrollbar-width:thin;scrollbar-color:#2a3249 #0e1320}
+#detail::-webkit-scrollbar{width:8px}
+#detail::-webkit-scrollbar-track{background:#0e1320}
+#detail::-webkit-scrollbar-thumb{background:#2a3249;border-radius:4px}
 .seatCard.selected{border:2px solid var(--acc);background:rgba(42,111,255,.1)}
 
-/* === Review 상세 디자인 (v1.2.1) === */
-.potHeader{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);margin-bottom:8px}
-.boardSection{margin:12px 0}
-.playerSection{margin:12px 0}
-.playerRow{display:grid;grid-template-columns:2fr 3fr 1fr;gap:12px;padding:6px 0;align-items:center}
-.playerName{font-weight:800}
-.playerHole{display:flex;gap:4px}
-.playerStack{text-align:right;color:var(--muted)}
-.sectionDivider{height:1px;background:var(--line);margin:8px 0}
-.potFooter{text-align:center;padding:12px;font-weight:800;color:var(--acc)}
-.cardBadgeSmall{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 6px;border-radius:6px;border:3px solid;font-size:0.8rem;font-weight:800}
-.boardSmall{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+/* === Review 상세 디자인 (v3.2.0: 극한 밀도) === */
+.potHeader{display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid var(--line);margin-bottom:2px;font-size:0.8rem}
+.boardSection{margin:4px 0}
+.playerSection{margin:4px 0}
+.playerRow{display:flex;gap:4px;padding:1px 0;align-items:center;font-size:0.7rem;flex-wrap:wrap}
+.playerName{font-weight:700;min-width:50px}
+.playerHole{display:flex;gap:2px}
+.playerStack{color:var(--muted);margin-left:auto}
+.sectionDivider{height:1px;background:var(--line);margin:4px 0}
+.potFooter{display:none}
+.cardBadgeSmall{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 4px;border-radius:4px;border:2px solid;background:#ffffff;font-size:0.7rem;font-weight:700}
+.boardSmall{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+.detailMeta{font-size:0.7rem;color:var(--muted);margin:2px 0}
+.streetRow{margin:2px 0;font-size:0.75rem;line-height:1.8}
+.streetTitle{display:inline;cursor:pointer;font-weight:700;color:#94a3b8;margin-right:6px}
+.streetTitle:hover{color:#a9b8ff}
+.streetBadges{display:inline}
 </style>
 </head>
 <body>
 <header class="row" style="justify-content:space-between">
-  <div><strong>Poker Hand Logger</strong><span class="muted small"> · 모바일 최적화 · 기여액 기반 · v2.9.0</span></div>
+  <div><strong>Poker Hand Logger</strong><span class="muted small"> · 모바일 최적화 · 기여액 기반 · v3.3.0</span></div>
   <div class="row">
     <button id="modeRecord" type="button" class="btnPrimary">Record</button>
     <button id="modeReview" type="button">Review</button>
@@ -181,34 +190,48 @@ select#tableSel:has(option.keyplayer-option:checked) {
 
     <div class="actionDock">
       <div class="pad" id="actionPad"></div>
-      <div class="row" style="margin-top:8px; width:100%">
-        <button id="undoBtn" type="button">Undo</button>
-        <button id="newHandBtn" type="button">새 핸드</button>
-        <button id="commitBtn" type="button" class="btnPrimary" style="flex:1">데이터 전송(커밋)</button>
-        <span id="commitMsg" class="small muted"></span>
+
+      <div class="row" style="margin-top:8px; gap:10px;">
+        <button id="undoBtn" type="button" style="flex:1;">Undo</button>
+        <button id="newHandBtn" type="button" style="flex:1;">새 핸드</button>
+      </div>
+
+      <div class="row" style="margin-top:8px; gap:0;">
+        <button id="commitBtn" type="button" class="btnPrimary"
+                style="flex:1; border-radius:12px 0 0 12px; border-right:1px solid #1a2540;">
+          데이터 전송(커밋)
+        </button>
+        <button id="sendVirtualRecordBtn" type="button" class="btnPrimary"
+                onclick="sendRecordToVirtual()"
+                style="flex:1; border-radius:0 12px 12px 0; background:#f59e0b; border-color:#f59e0b;">
+          📤 VIRTUAL 전송
+        </button>
+      </div>
+
+      <div id="virtualRecordOptions"
+           style="margin-top:6px; font-size:0.7rem; display:flex; gap:4px; flex-wrap:wrap; align-items:center; padding:4px; background:#0e1322; border-radius:4px;">
+      </div>
+
+      <div style="margin-top:4px; display:flex; gap:8px; align-items:center;">
+        <span id="commitMsg" class="small muted" style="flex:1;"></span>
+        <span id="virtualRecordMsg" class="small muted"></span>
       </div>
     </div>
   </div>
 
   <div class="panel hidden" id="panelReview">
     <h3>Review</h3>
-    <!-- v2.3.0: VIRTUAL 시트 설정 UI -->
+    <!-- v3.0.0: VIRTUAL 시트 설정 UI (간소화 - 전송 기능은 핸드 상세에서) -->
     <div class="panel" style="background:#0e1322; margin-bottom:10px">
       <div class="row settings small">
         <label>VIRTUAL Sheet ID</label>
         <input id="virtualSheetId" type="text" placeholder="예: 13LpVWYH... (VIRTUAL 시트 소속 스프레드시트 ID)"/>
         <button id="saveVirtualBtn" type="button">저장</button>
       </div>
-      <div class="row settings small">
-        <label style="display:flex;align-items:center;gap:8px">
-          <input type="checkbox" id="eliminatedChk"/> 탈락(ELIMINATED) 표시
-        </label>
-      </div>
       <div class="small muted" id="virtualMsg"></div>
     </div>
     <div class="row">
       <button id="refreshList" type="button">새로고침</button>
-      <button id="sendToVirtualBtn" type="button" class="btnPrimary">선택한 핸드 VIRTUAL 전송</button>
       <span id="listInfo" class="small muted"></span>
     </div>
     <div id="reviewContainer">
@@ -218,7 +241,7 @@ select#tableSel:has(option.keyplayer-option:checked) {
   </div>
 </div>
 
-<footer class="row"><span class="small muted">BTN만 · 사이드팟 자동계산 없음 · 보드 미완성 허용 · ALL-IN 금액 수동 · v2.9.0</span></footer>
+<footer class="row"><span class="small muted">BTN만 · 사이드팟 자동계산 없음 · 보드 미완성 허용 · ALL-IN 금액 수동 · v3.3.0</span></footer>
 
 <!-- v2.5.0: Bottom Sheet 홀카드 선택 -->
 <div id="overlay"><div class="box">
@@ -229,13 +252,14 @@ select#tableSel:has(option.keyplayer-option:checked) {
 </div></div>
 
 <script>
-/* ===== Poker Hand Logger — v2.9.0 (2025-10-13) ===== */
+/* ===== Poker Hand Logger — v3.3.0 (2025-01-15) ===== */
 const S={tables:[],roster:{},cfg:{},
   curTable:null,startStreetInit:'PREFLOP',curStreet:'PREFLOP',
   btnSeat:null,seats:[],activeSeatMap:{},prePot:0,actions:[],nextSeq:1,board:[],
   toCall:0,pot:0,contrib:{},allin:{},folded:{},actorIdx:0,order:[],acted:new Set(),
   holes:{},holePickSeat:null,handNo:'',stacks:{},
-  virtualSheetId:'',bbValue:0};
+  virtualSheetId:'',bbValue:0,
+  nextHandNo:1}; // v3.3.0: 다음 핸드 번호 (자동 증가)
 
 const SUITS=['s','h','d','c'];
 const RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
@@ -347,10 +371,9 @@ function initFromConfig(data){
   document.getElementById('saveSettingsBtn').onclick=saveSettings_;
   document.getElementById('settingsMsg').textContent= S.bbValue ? `BB=${S.bbValue}` : 'BB를 설정하세요';
 
-  // Review 모드 VIRTUAL 설정
+  // Review 모드 VIRTUAL 설정 (v3.0.0: 전송 버튼 제거, 설정만 유지)
   document.getElementById('virtualSheetId').value=S.virtualSheetId;
   document.getElementById('saveVirtualBtn').onclick=saveVirtualSettings_;
-  document.getElementById('sendToVirtualBtn').onclick=sendToVirtual;
   document.getElementById('virtualMsg').textContent= S.virtualSheetId ? `VIRTUAL 시트 저장됨` : 'VIRTUAL 시트ID를 설정하세요';
 
   const sel=document.getElementById('tableSel');
@@ -375,7 +398,15 @@ function initFromConfig(data){
 
   document.getElementById('btnSeat').onchange=e=>{S.btnSeat=toInt(e.target.value); buildTurnOrder(); renderAll();};
   document.getElementById('prePot').oninput=e=>{S.prePot=toInt(e.target.value); S.pot=S.prePot+sumObj(S.contrib); renderPot();};
-  document.getElementById('handNo').oninput=e=>{S.handNo=e.target.value||'';};
+  // v3.3.0: handNo 입력 필드 - 자동 채움 + 수동 수정 가능
+  const handNoInput = document.getElementById('handNo');
+  handNoInput.oninput = e => {
+    const val = e.target.value;
+    if (val && val.trim() !== '') {
+      S.nextHandNo = toInt(val); // 수동 수정 시 nextHandNo 동기화
+    }
+  };
+
   document.getElementById('undoBtn').onclick=undoOnce;
   document.getElementById('commitBtn').onclick=commitHand;
   document.getElementById('newHandBtn').onclick=()=>resetHandState(true);
@@ -394,6 +425,32 @@ function initFromConfig(data){
   document.getElementById('streetStart').value=S.startStreetInit;
   renderAll();
   loadList();
+
+  // v3.3.0: 앱 시작 시 다음 핸드 번호 조회
+  initNextHandNo();
+}
+
+/* ===== v3.3.0: Auto Hand Number ===== */
+function initNextHandNo() {
+  google.script.run
+    .withSuccessHandler(num => {
+      S.nextHandNo = num;
+      updateHandNoDisplay();
+    })
+    .withFailureHandler(err => {
+      console.error('getNextHandNo failed:', err);
+      S.nextHandNo = 1; // fallback
+      updateHandNoDisplay();
+    })
+    .getNextHandNo();
+}
+
+function updateHandNoDisplay() {
+  const input = document.getElementById('handNo');
+  if (input) {
+    input.value = S.nextHandNo;
+    input.placeholder = `자동: ${S.nextHandNo}`;
+  }
 }
 
 function saveSettings_(){
@@ -413,7 +470,10 @@ function saveVirtualSettings_(){
 function setMode(m){
   const rec=document.getElementById('panelRecord'), rev=document.getElementById('panelReview');
   const bR=document.getElementById('modeRecord'), bV=document.getElementById('modeReview');
-  if(m==='record'){rec.classList.remove('hidden'); rev.classList.add('hidden'); bR.classList.add('btnPrimary'); bV.classList.remove('btnPrimary');}
+  if(m==='record'){
+    rec.classList.remove('hidden'); rev.classList.add('hidden'); bR.classList.add('btnPrimary'); bV.classList.remove('btnPrimary');
+    renderVirtualRecordOptions();
+  }
   else{rev.classList.remove('hidden'); rec.classList.add('hidden'); bV.classList.add('btnPrimary'); bR.classList.remove('btnPrimary'); loadList(true);}
 }
 
@@ -434,6 +494,7 @@ function onTableChange(e){
   }).join('')}`;
   S.btnSeat=btnDefault||null; S.handNo=''; document.getElementById('handNo').value='';
   S.curStreet=S.startStreetInit; resetHandState(false); renderAll();
+  renderVirtualRecordOptions();
 }
 
 /* ===== 핸드 상태 ===== */
@@ -441,7 +502,12 @@ function resetHandState(clearInputs){
   S.contrib={}; S.actions=[]; S.nextSeq=1; S.board=[]; S.holes={};
   S.pot=S.prePot; S.toCall=0; S.allin={}; S.folded={}; S.acted=new Set();
   S.curStreet=S.startStreetInit; buildTurnOrder(); renderAll();
-  if(clearInputs){ document.getElementById('commitMsg').textContent='새 핸드 시작'; }
+  if(clearInputs){
+    document.getElementById('commitMsg').textContent='새 핸드 시작';
+    renderVirtualRecordOptions();
+    // v3.3.0: 새 핸드 시작 시 hand_no 표시 업데이트
+    updateHandNoDisplay();
+  }
 }
 
 function buildTurnOrder(){
@@ -501,7 +567,9 @@ function renderSeatToggles(){
     // v2.4.0: keyplayer 체크
     const rosterEntry=(S.roster[S.curTable]||[]).find(r=>toInt(r.seat)===s.seat);
     const isKey=rosterEntry && rosterEntry.keyplayer;
-    el.className='pill '+(isKey?'keyplayer ':'')+(S.activeSeatMap[s.seat]?'active':'');
+    const isActive=S.activeSeatMap[s.seat];
+    // v3.2.1: keyplayer 하이라이트는 active일 때만 표시
+    el.className='pill '+(isKey && isActive?'keyplayer ':'')+(isActive?'active':'');
     el.textContent=(isKey?'⭐ ':'')+seatShort(s.seat,s.name);
     el.title=isKey?'키플레이어 (J열 자막 생성)':'';
     el.onclick=()=>{ if(S.actions.length>0) return; S.activeSeatMap[s.seat]=!S.activeSeatMap[s.seat]; buildTurnOrder(); renderAll(); };
@@ -577,6 +645,7 @@ function applyAction({seat,action,amt}){
   computeToCall();
   S.actions.push({seq:S.nextSeq++,street:S.curStreet,seat,action,amount_input:toInt(amt)||0,to_call_after:S.toCall,contrib_after_seat:S.contrib[seat],pot_after:S.pot});
   advanceActor(); renderAll();
+  renderVirtualRecordOptions();
   if(isStreetComplete()){
     const nxt=nextStreet(S.curStreet);
     if(nxt){ S.curStreet=nxt; S.acted=new Set(); computeToCall(); buildTurnOrder(); renderAll(); }
@@ -699,11 +768,17 @@ function closeOverlay(){
 function commitHand(){
   perfStart('commit');
   saveSettings_();
+
+  // v3.3.0: 자동 hand_no 사용 (수동 입력 시 입력값 우선)
+  const handNoInput = document.getElementById('handNo');
+  const manualHandNo = handNoInput.value ? toInt(handNoInput.value) : 0;
+  const handNo = manualHandNo > 0 ? manualHandNo : S.nextHandNo;
+
   const payload={
     client_uuid: uuid(),
     event_id:'',
     table_id:S.curTable||'',
-    hand_no:(S.handNo||''),
+    hand_no: handNo,
     start_street:S.startStreetInit,
     started_at:new Date().toISOString(),
     ended_at:'',
@@ -728,6 +803,11 @@ function commitHand(){
       msg.textContent=`완료: #${res.hand_no||'-'} (${res.hand_id})`;
       btn.disabled=false;
       vibrate(HAPTIC.STRONG);
+
+      // v3.3.0: 커밋 후 다음 핸드 번호 증가
+      S.nextHandNo++;
+      updateHandNoDisplay();
+
       resetHandState(true); loadList();
     })
     .withFailureHandler(err=>{
@@ -739,26 +819,182 @@ function commitHand(){
     .saveHand(payload);
 }
 
-/* v2.3.0: Review 모드에서 VIRTUAL 전송 */
-function sendToVirtual(){
-  saveVirtualSettings_();
-  if(!S.virtualSheetId){ alert('VIRTUAL 시트 ID를 먼저 설정하세요'); return; }
-  if(!reviewState.selectedId){ alert('먼저 핸드를 선택하세요'); return; }
+/* === Record 탭 VIRTUAL 전송 (v3.2.0) === */
+function renderVirtualRecordOptions(){
+  const container=document.getElementById('virtualRecordOptions');
 
-  const btn=document.getElementById('sendToVirtualBtn');
-  btn.disabled=true; btn.textContent='전송 중...';
+  if(!S.curTable || !S.activeSeatMap || Object.keys(S.activeSeatMap).filter(k=>S.activeSeatMap[k]).length===0){
+    container.innerHTML='<span style="color:#64748b;">테이블과 참여 좌석을 먼저 설정하세요</span>';
+    document.getElementById('sendVirtualRecordBtn').disabled=true;
+    return;
+  }
 
-  const eliminated = document.getElementById('eliminatedChk').checked;
+  document.getElementById('sendVirtualRecordBtn').disabled=false;
+
+  const head={
+    table_id:S.curTable,
+    stacks_json:JSON.stringify(S.stacks),
+    holes_json:JSON.stringify(S.holes)
+  };
+
+  const participants=extractParticipants(head,S.actions);
+
+  if(participants.length===0){
+    container.innerHTML='<span style="color:#64748b;">참가자 없음</span>';
+    document.getElementById('sendVirtualRecordBtn').disabled=true;
+    return;
+  }
+
+  const defaultBB=S.bbValue||0;
+
+  container.innerHTML=`
+    <label style="display:flex; align-items:center; gap:4px;">
+      <span style="color:#94a3b8;">BB</span>
+      <input type="number" id="bbRecordInput" value="${defaultBB}" placeholder="1k"
+             style="width:50px; padding:2px 4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.65rem;">
+    </label>
+    ${participants.map(p=>`
+      <label style="display:flex; align-items:center; gap:2px; font-size:0.65rem;">
+        <input type="checkbox" class="player-select-chk" value="${p.seat}" checked
+               style="width:12px; height:12px; cursor:pointer; accent-color:#3b82f6;">
+        <span style="font-weight:600;">${p.name}</span>
+        <input type="number" class="stack-override-input" data-seat="${p.seat}" value="${p.stack||0}"
+               style="width:50px; padding:2px 4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.65rem;">
+        <input type="checkbox" class="eliminated-chk" data-seat="${p.seat}"
+               style="width:10px; height:10px; cursor:pointer; accent-color:#ef4444;">
+      </label>
+    `).join('')}
+  `;
+}
+
+function sendRecordToVirtual(){
+  if(!S.virtualSheetId){
+    alert('Review 탭에서 VIRTUAL 시트 ID를 먼저 설정하세요');
+    return;
+  }
+
+  if(!S.curTable){
+    alert('테이블을 선택하세요');
+    return;
+  }
+
+  const selectedSeats=Array.from(document.querySelectorAll('.player-select-chk:checked'))
+    .map(chk=>chk.value);
+
+  if(selectedSeats.length===0){
+    alert('자막에 표시할 플레이어를 최소 1명 이상 선택하세요');
+    return;
+  }
+
+  const eliminatedSeats=Array.from(document.querySelectorAll('.eliminated-chk:checked'))
+    .map(chk=>chk.dataset.seat);
+
+  const stackOverrides={};
+  document.querySelectorAll('.stack-override-input').forEach(input=>{
+    stackOverrides[input.dataset.seat]=toInt(input.value);
+  });
+
+  const bbOverride=toInt(document.getElementById('bbRecordInput').value);
+
+  const payload={
+    selectedSeats,
+    eliminatedSeats,
+    stackOverrides,
+    bbOverride
+  };
+
+  const tempHandId='record_'+Date.now();
+  const btn=document.getElementById('sendVirtualRecordBtn');
+  const msg=document.getElementById('virtualRecordMsg');
+
+  btn.disabled=true;
+  btn.textContent='전송 중...';
+  msg.textContent='';
 
   google.script.run
     .withSuccessHandler(res=>{
-      console.log('VIRTUAL 전송 응답:', res);
-      btn.disabled=false; btn.textContent='선택한 핸드 VIRTUAL 전송';
-      const msg = document.getElementById('virtualMsg');
+      btn.disabled=false;
+      btn.innerHTML='📤 VIRTUAL 전송';
+
       if(res && res.success){
-        msg.textContent = `✅ 전송 성공! Row ${res.row} 업데이트됨`;
+        msg.textContent=`✅ Row ${res.row}`;
+        msg.style.color='#22c55e';
+        vibrate(HAPTIC.STRONG);
+      }else{
+        msg.textContent=`❌ 실패`;
+        msg.style.color='#ef4444';
+      }
+
+      setTimeout(()=>{msg.textContent=''; msg.style.color='';},3000);
+    })
+    .withFailureHandler(err=>{
+      btn.disabled=false;
+      btn.innerHTML='📤 VIRTUAL 전송';
+      msg.textContent=`❌ ${err.message||err}`;
+      msg.style.color='#ef4444';
+      setTimeout(()=>{msg.textContent=''; msg.style.color='';},3000);
+    })
+    .sendHandToVirtual(tempHandId,S.virtualSheetId,payload);
+}
+
+/* v3.0.0: 핸드 상세에서 VIRTUAL 전송 (복수 플레이어 선택 + 탈락 + 스택 수정) */
+function sendCurrentHandToVirtual(){
+  saveVirtualSettings_();
+  if(!S.virtualSheetId){ alert('VIRTUAL 시트 ID를 먼저 설정하세요'); return; }
+  if(!reviewState.selectedId){ alert('핸드가 선택되지 않았습니다'); return; }
+
+  // 1. 선택된 플레이어 seat 배열 (자막에 표시할 플레이어)
+  const selectedSeats = Array.from(document.querySelectorAll('.player-select-chk:checked'))
+    .map(chk => chk.value);
+
+  if(selectedSeats.length === 0){
+    alert('자막에 표시할 플레이어를 최소 1명 이상 선택하세요');
+    return;
+  }
+
+  // 2. 탈락 플레이어 seat 배열
+  const eliminatedSeats = Array.from(document.querySelectorAll('.eliminated-chk:checked'))
+    .map(chk => chk.dataset.seat);
+
+  // 3. 수정된 스택 값 수집
+  const stackOverrides = {};
+  document.querySelectorAll('.stack-override-input').forEach(input => {
+    const seat = input.dataset.seat;
+    const value = toInt(input.value);
+    stackOverrides[seat] = value;
+  });
+
+  // 4. 수정된 BB 값
+  const bbOverride = toInt(document.getElementById('bbOverrideInput').value);
+
+  // 5. payload 구성
+  const payload = {
+    selectedSeats: selectedSeats,
+    eliminatedSeats: eliminatedSeats,
+    stackOverrides: stackOverrides,
+    bbOverride: bbOverride
+  };
+
+  console.log('[VIRTUAL] 전송 payload:', payload);
+
+  const btn = document.getElementById('sendToVirtualDetailBtn');
+  const msg = document.getElementById('virtualDetailMsg');
+
+  btn.disabled = true;
+  btn.textContent = '전송 중...';
+  msg.textContent = '';
+
+  google.script.run
+    .withSuccessHandler(res=>{
+      console.log('VIRTUAL 전송 응답 (상세뷰):', res);
+      btn.disabled = false;
+      btn.textContent = '📤 VIRTUAL 전송';
+
+      if(res && res.success){
+        msg.textContent = `✅ 전송 성공! Row ${res.row} 업데이트됨 (선택: ${selectedSeats.length}명)`;
         msg.style.color = '#22c55e';
-        // 선택된 핸드에 시각적 표시
+
+        // 리스트 항목에도 시각적 표시
         const selectedCard = document.querySelector('#list .seatCard.selected');
         if(selectedCard && !selectedCard.dataset.sent){
           selectedCard.style.borderColor = '#22c55e';
@@ -769,16 +1005,17 @@ function sendToVirtual(){
         msg.textContent = `❌ 전송 실패: ${res.reason||'알 수 없는 오류'}`;
         msg.style.color = '#ef4444';
       }
-      setTimeout(()=>{msg.textContent=''; msg.style.color='';}, 3000);
+
+      setTimeout(()=>{msg.textContent=''; msg.style.color='';}, 5000);
     })
     .withFailureHandler(err=>{
-      btn.disabled=false; btn.textContent='선택한 핸드 VIRTUAL 전송';
-      const msg = document.getElementById('virtualMsg');
+      btn.disabled = false;
+      btn.textContent = '📤 VIRTUAL 전송';
       msg.textContent = `❌ 오류: ${err.message||err}`;
       msg.style.color = '#ef4444';
-      setTimeout(()=>{msg.textContent=''; msg.style.color='';}, 3000);
+      setTimeout(()=>{msg.textContent=''; msg.style.color='';}, 5000);
     })
-    .sendHandToVirtual(reviewState.selectedId, S.virtualSheetId, S.bbValue||0, eliminated);
+    .sendHandToVirtual(reviewState.selectedId, S.virtualSheetId, payload);
 }
 function getBoardObjectForSave(){
   const b=[...S.board]; // [f1,f2,f3,turn,river]
@@ -901,26 +1138,42 @@ function groupByStreet(acts){
   (acts||[]).forEach(a=>{ const s=(a.street||'').toUpperCase(); if(g[s]) g[s].push(a); else g.RIVER.push(a); });
   return g;
 }
-function formatStreetSection(title,arr,tableId){
+function formatStreetSection(title,arr,tableId,idx){
   if(!arr||!arr.length) return '';
   const badges=arr.map(a=>{
     const fullName=getSeatNameByTable(tableId,a.seat);
     const name=seatNameOnly(a.seat,fullName);
-    const amt=a.amount_input?` ${a.amount_input}`:'';
+    const amt=a.amount_input?` ${formatCompact(toInt(a.amount_input))}`:'';
     const k=(a.action||'').toUpperCase();
     const cl=k==='CHECK'?'act-chk':k==='CALL'?'act-call':k==='BET'?'act-bet':k==='RAISE'?'act-raise':k==='ALLIN'?'act-allin':'act-fold';
-    return `<span class="actBadge ${cl}">${name} ${a.action}${amt} · pot ${a.pot_after}</span>`;
+    return `<span class="actBadge ${cl}">${name} ${a.action}${amt}</span>`;
   }).join('');
-  return `<div class="streetTitle">${title}</div><div class="badgeRow">${badges}</div>`;
+  const collapseId=`street_${idx}`;
+  return `<div class="streetRow">
+    <span class="streetTitle" onclick="toggleStreet('${collapseId}')">▼ ${title}(${arr.length})</span>
+    <span id="${collapseId}" class="streetBadges">${badges}</span>
+  </div>`;
 }
-/* === Review 상세 렌더링 헬퍼 (v1.2.1) === */
+/* === Review 상세 렌더링 헬퍼 (v3.1.0) === */
 function renderCardBadge(cs,size='large'){
   const cc=cardCode(cs); if(!cc) return '';
   const suit=cc.slice(-1), r=cc.slice(0,-1);
   const sym=suit==='s'?'♠':suit==='h'?'♥':suit==='d'?'♦':'♣';
   const cl=suit==='s'?'cb-s':suit==='h'?'cb-h':suit==='d'?'cb-d':'cb-c';
-  const sizeClass=size==='small'?'cardBadgeSmall':'cardBadge';
+  const sizeClass=size==='compact'?'cardBadgeSmall':(size==='small'?'cardBadgeSmall':'cardBadge');
   return `<span class="${sizeClass} ${cl}">${r}${sym}</span>`;
+}
+
+function toggleStreet(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  if(el.style.display==='none'){
+    el.style.display='inline';
+    el.previousElementSibling.textContent=el.previousElementSibling.textContent.replace('▶','▼');
+  }else{
+    el.style.display='none';
+    el.previousElementSibling.textContent=el.previousElementSibling.textContent.replace('▼','▶');
+  }
 }
 
 function calculateFinalPot(head,acts){
@@ -930,19 +1183,31 @@ function calculateFinalPot(head,acts){
   return maxPot||toInt(head.pre_pot)||0;
 }
 
+function formatCompact(num){
+  num=toInt(num);
+  if(num>=1000000) return (num/1000000).toFixed(1)+'M';
+  if(num>=1000){
+    const k=num/1000;
+    return (k%1===0?k.toFixed(0):k.toFixed(1))+'k';
+  }
+  return num.toString();
+}
+
 function formatPotWithBB(pot,bb){
   pot=toInt(pot);
-  if(!bb||bb===0) return pot.toLocaleString();
+  if(!bb||bb===0) return formatCompact(pot);
   const bbVal=(pot/bb).toFixed(1);
-  return `${pot.toLocaleString()} (${bbVal}BB)`;
+  return `${formatCompact(pot)}(${bbVal}BB)`;
 }
 
 function renderPotHeader(head,acts){
   const pot=calculateFinalPot(head,acts);
   const bb=toInt(localStorage.getItem('phl_bbSize')||0);
+  const handIdShort=(head.hand_id||'').slice(0,8)+'...';
+  const bbInfo=bb>0?` BB${formatCompact(bb)}`:'';
   return `<div class="potHeader">
-    <div><b>핸드 #${head.hand_no||'-'}</b></div>
-    <div><b>팟: ${formatPotWithBB(pot,bb)}</b></div>
+    <div><b>#${head.hand_no||'-'}</b> T${head.table_id||'-'} BTN${head.btn_seat||'-'}${bbInfo} <span style="color:#64748b">${handIdShort}</span></div>
+    <div><b>${formatPotWithBB(pot,bb)}</b></div>
   </div>`;
 }
 
@@ -964,12 +1229,12 @@ function renderPlayerRows(head){
     const seat=toInt(s);
     const fullName=getSeatNameByTable(tableId,seat);
     const name=seatNameOnly(seat,fullName);
-    const pos=(seat===btnSeat)?' (BTN)':'';
+    const pos=(seat===btnSeat)?' BTN':'';
     const holeCards=holes[s]||[];
     const holeHTML=(holeCards[0]&&holeCards[1])
-      ?renderCardBadge(holeCards[0])+renderCardBadge(holeCards[1])
-      :'<span class="muted">-</span>';
-    const stack=stacks[s]?toInt(stacks[s]).toLocaleString():'-';
+      ?renderCardBadge(holeCards[0],'compact')+renderCardBadge(holeCards[1],'compact')
+      :'<span class="muted" style="font-size:0.7rem">-</span>';
+    const stack=stacks[s]?formatCompact(toInt(stacks[s])):'-';
     return `<div class="playerRow">
       <span class="playerName">${name}${pos}</span>
       <span class="playerHole">${holeHTML}</span>
@@ -977,41 +1242,108 @@ function renderPlayerRows(head){
     </div>`;
   }).join('');
 
-  return `<div class="playerSection">
-    <div class="sectionDivider"></div>
-    ${rows}
-    <div class="sectionDivider"></div>
-  </div>`;
+  return `<div class="playerSection">${rows}</div>`;
 }
 
 function renderPotFooter(head,acts){
-  const pot=calculateFinalPot(head,acts);
-  const bb=toInt(localStorage.getItem('phl_bbSize')||0);
-  return `<div class="sectionDivider"></div>
-    <div class="potFooter">최종 팟: ${formatPotWithBB(pot,bb)}</div>`;
+  return '';
 }
 
 function renderDetailContent(head,acts){
   const b=head.board||head||{}; const g=groupByStreet(acts||[]);
   const tableId=head.table_id;
+  const participants = extractParticipants(head, acts);
+  const boardArr=boardToArray(b);
 
   return `${renderPotHeader(head,acts)}
-    <div class="small muted">${head.hand_id||''}</div>
-    <div class="small">Table ${tableId||'-'} · BTN ${head.btn_seat||'-'} · <b>시작: ${head.start_street||'-'}</b></div>
 
     <div class="boardSection">
-      <div class="small muted">보드</div>
-      ${boardBadges(b)}
+      ${boardArr.length>0?`<div style="display:flex;gap:3px;flex-wrap:wrap">${boardArr.map(cs=>renderCardBadge(cs,'compact')).join('')}</div>`:'<span class="muted" style="font-size:0.7rem">-</span>'}
     </div>
 
     ${renderPlayerRows(head)}
 
-    ${formatStreetSection('PREFLOP',g.PREFLOP,tableId)}
-    ${formatStreetSection('FLOP',g.FLOP,tableId)}
-    ${formatStreetSection('TURN',g.TURN,tableId)}
-    ${formatStreetSection('RIVER',g.RIVER,tableId)}
+    <div class="sectionDivider"></div>
 
-    ${renderPotFooter(head,acts)}`;
+    ${formatStreetSection('PREFLOP',g.PREFLOP,tableId,0)}
+    ${formatStreetSection('FLOP',g.FLOP,tableId,1)}
+    ${formatStreetSection('TURN',g.TURN,tableId,2)}
+    ${formatStreetSection('RIVER',g.RIVER,tableId,3)}
+
+    ${renderPotFooter(head,acts)}
+
+    ${renderVirtualSection(head.hand_id, participants)}`;
+}
+
+function renderVirtualSection(handId, participants){
+  const defaultBB = S.bbValue || 0;
+
+  const chunks = [];
+  const chunkSize = 2;
+  for(let i = 0; i < participants.length; i += chunkSize){
+    chunks.push(participants.slice(i, i + chunkSize));
+  }
+
+  return `
+    <div style="margin-top:8px; padding:8px; background:#0e1322; border-radius:4px; border:1px solid #1e293b;">
+      <div style="font-size:0.7rem; margin-bottom:6px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:4px;">
+          <span style="color:#94a3b8;">BB</span>
+          <input type="number" id="bbOverrideInput" value="${defaultBB}" placeholder="1k"
+                 style="width:60px; padding:3px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.7rem;">
+        </label>
+        ${chunks.map((chunk, chunkIdx) => chunk.map(p => `
+          <label style="display:flex; align-items:center; gap:3px; font-size:0.7rem;">
+            <input type="checkbox" class="player-select-chk" value="${p.seat}" checked
+                   style="width:14px; height:14px; cursor:pointer; accent-color:#3b82f6;">
+            <span style="font-weight:600;">${p.name}</span>
+            <input type="number" class="stack-override-input" data-seat="${p.seat}" value="${p.stack || 0}" placeholder="0"
+                   style="width:60px; padding:3px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.7rem;">
+            <input type="checkbox" class="eliminated-chk" data-seat="${p.seat}"
+                   style="width:12px; height:12px; cursor:pointer; accent-color:#ef4444;">
+          </label>
+        `).join('')).join('')}
+      </div>
+
+      <button id="sendToVirtualDetailBtn" class="btnPrimary" onclick="sendCurrentHandToVirtual()"
+              style="width:100%; padding:6px; font-size:0.75rem; font-weight:600;">
+        📤 전송
+      </button>
+
+      <div id="virtualDetailMsg" style="margin-top:4px; font-size:0.65rem; text-align:center;"></div>
+    </div>
+  `;
+}
+
+/* ===== 참가자 추출 (핸드 상세 → 플레이어 목록 + 스택 데이터) ===== */
+function extractParticipants(head, acts){
+  // acts에서 seat 추출
+  const seats = new Set();
+  (acts||[]).forEach(a => {
+    if(a.seat) seats.add(String(a.seat));
+  });
+
+  // holes_json에서도 추출 (액션 없이 폴드한 경우 대비)
+  const holes = safeJson_(head.holes_json||'{}');
+  Object.keys(holes||{}).forEach(seat => seats.add(String(seat)));
+
+  // stacks_json에서 최종 스택 추출
+  const stacks = safeJson_(head.stacks_json||'{}');
+
+  // roster에서 이름 매칭
+  const tableId = head.table_id;
+  const roster = (S.roster && S.roster[tableId]) || [];
+
+  return Array.from(seats).sort((a,b)=>toInt(a)-toInt(b)).map(seat => {
+    const player = roster.find(p => String(p.seat) === String(seat));
+    const stack = stacks[seat] ? toInt(stacks[seat]) : 0;
+
+    return {
+      seat: seat,
+      name: player && player.player ? player.player : `Seat ${seat}`,
+      stack: stack
+    };
+  });
 }
 
 /* ===== 유틸 ===== */

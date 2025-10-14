@@ -194,7 +194,7 @@ function readRoster_(){
     player:findColIndex_(header,ROSTER_HEADERS.player),
     nation:findColIndex_(header,ROSTER_HEADERS.nation),
     chips:findColIndex_(header,ROSTER_HEADERS.chips),
-    keyplayer:findColIndex_(header,ROSTER_HEADERS.keyplayer)
+    keyplayer:10 // 🔧 FIX: K열(인덱스 10) 고정 - 헤더 무관
   };
 
   // 선택적 컬럼 인덱스 (Seats.csv 확장 필드)
@@ -254,6 +254,42 @@ function getConfig(){
   }catch(e){
     log_('ERR_GETCFG',e.message);
     return {tables:[],roster:{},config:{},error:String(e.message||e)};
+  }
+}
+
+/* ==== v3.3.0: Auto Hand Number ==== */
+/**
+ * HANDS 시트의 hand_no 최대값을 조회하여 다음 번호 반환
+ * @returns {number} 다음 hand_no (HANDS 시트가 비어있으면 1)
+ */
+function getNextHandNo(){
+  try {
+    ensureSheets_();
+    const ss = appSS_();
+    const shH = ss.getSheetByName(SH.HANDS);
+
+    if (!shH) return 1;
+
+    const data = shH.getDataRange().getValues();
+    if (data.length < 2) return 1; // 헤더만 있으면 1부터 시작
+
+    const header = data[0];
+    const handNoCol = header.indexOf('hand_no');
+
+    if (handNoCol === -1) return 1;
+
+    let maxHandNo = 0;
+    for (let i = 1; i < data.length; i++) {
+      const handNo = toInt_(data[i][handNoCol]);
+      if (handNo > maxHandNo) {
+        maxHandNo = handNo;
+      }
+    }
+
+    return maxHandNo + 1;
+  } catch(e) {
+    log_('ERR_GETNEXTHANDNO', e.message);
+    return 1; // fallback
   }
 }
 
@@ -555,12 +591,15 @@ function updateExternalVirtual_(sheetId, detail, ext){
 }
 
 /* ===== Review 모드 VIRTUAL 전송 ===== */
-function sendHandToVirtual(hand_id, sheetId, bb, eliminated){
+function sendHandToVirtual(hand_id, sheetId, payload){
   if(!hand_id) throw new Error('hand_id required');
   if(!sheetId) throw new Error('sheetId required');
+  if(!payload) throw new Error('payload required');
 
   return withScriptLock_(()=>{
-    log_('PUSH_VIRTUAL_BEGIN', `hand_id=${hand_id}`, '');
+    const payloadStr = JSON.stringify(payload);
+    log_('PUSH_VIRTUAL_BEGIN', `hand_id=${hand_id} payload=${payloadStr}`, '');
+    Logger.log('🚀 [VIRTUAL] 시작 - hand_id: ' + hand_id + ' sheetId: ' + sheetId + ' payload: ' + payloadStr);
 
     // 1. 핸드 상세 조회
     const detail = getHandDetail(hand_id);
@@ -569,13 +608,18 @@ function sendHandToVirtual(hand_id, sheetId, bb, eliminated){
     const head = detail.head;
     const isoTime = head.started_at || nowKST_().toISOString();
     const hhmmTime = extractTimeHHMM_(isoTime);
+    Logger.log('📋 [VIRTUAL] 핸드 상세: table_id=' + head.table_id + ' hand_no=' + head.hand_no + ' started_at=' + isoTime + ' hhmmTime=' + hhmmTime);
 
     // 2. VIRTUAL 시트 열기
     const ss = SpreadsheetApp.openById(sheetId);
     const sh = ss.getSheetByName('VIRTUAL') || ss.getSheets()[0];
+    const sheetName = sh.getName();
     const last = sh.getLastRow();
+    Logger.log('📄 [VIRTUAL] 타겟 시트: sheetId=' + sheetId + ' sheetName=' + sheetName + ' lastRow=' + last);
+
     if(last < 2){
       log_('PUSH_VIRTUAL_FAIL', 'no-rows', '');
+      Logger.log('❌ [VIRTUAL] 실패: 데이터 행 없음 (lastRow < 2)');
       return {success:false, reason:'no-rows'};
     }
 
@@ -583,6 +627,7 @@ function sendHandToVirtual(hand_id, sheetId, bb, eliminated){
     const rngVals = sh.getRange(2,3,last-1,1).getValues();
     const rngDisp = sh.getRange(2,3,last-1,1).getDisplayValues();
     const rngE = sh.getRange(2,5,last-1,1).getValues(); // E열 상태 확인
+    Logger.log('🔍 [VIRTUAL] C열 Time 검색 중... (목표: ' + hhmmTime + ')');
 
     let pickRow = -1;
     let debugInfo = [];
@@ -599,36 +644,101 @@ function sendHandToVirtual(hand_id, sheetId, bb, eliminated){
         // E열이 이미 '미완료'면 스킵 (이미 처리된 행)
         if(eVal === '미완료'){
           log_('PUSH_VIRTUAL_SKIP', `row=${i+2} already processed`, '');
+          console.log('⏭️ [VIRTUAL] 스킵: Row ' + (i+2) + ' (이미 처리됨)');
           continue;
         }
         pickRow = i + 2;
+        console.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (Time: ' + cellHHMM + ')');
         break;
       }
     }
 
     if(pickRow < 0){
       log_('PUSH_VIRTUAL_FAIL', `no-match: ${hhmmTime}. Checked: ${debugInfo.join(', ')}`, '');
+      console.log('❌ [VIRTUAL] 실패: Time 매칭 없음 (목표: ' + hhmmTime + ')');
+      console.log('🔍 [VIRTUAL] 검색된 행들:', debugInfo.slice(0, 10).join(', '));
       return {success:false, reason:`no-match: ${hhmmTime}`};
     }
 
     log_('PUSH_VIRTUAL_ROW', `row=${pickRow} time=${hhmmTime}`, '');
 
     // 4. 값 구성
+    console.log('🔧 [VIRTUAL] 값 생성 시작...');
     const E = '미완료';
     const F = buildFileName_(detail);
     const G = 'A';
-    const H = buildHistoryBlock_(detail, bb);
-    const J = buildSubtitle_(detail, bb, eliminated);
+    const H = buildHistoryBlock_(detail, payload.bbOverride || 0);
+    const J = buildSubtitle_(detail, payload);
+
+    console.log('📝 [VIRTUAL] 생성된 값:', {
+      E: E,
+      F: F.slice(0, 50) + (F.length > 50 ? '...' : ''),
+      G: G,
+      H: H.slice(0, 100) + (H.length > 100 ? '...' : ''),
+      'J (길이)': J.length,
+      'J (내용)': J || '(빈 문자열)'
+    });
+
+    // J열 상세 디버깅
+    if(!J || J.length === 0){
+      console.log('⚠️ [VIRTUAL] J열 경고: 빈 문자열 생성됨');
+      console.log('🔍 [VIRTUAL] J열 생성 과정 추적 시작...');
+
+      // buildSubtitle_ 함수 내부 로직 재실행 (디버깅용)
+      const tableId = head.table_id;
+      const rosterData = readRoster_();
+      console.log('📊 [VIRTUAL] Roster 데이터:', {
+        'tables 수': rosterData.tables ? rosterData.tables.length : 0,
+        'roster 테이블 수': rosterData.roster ? Object.keys(rosterData.roster).length : 0,
+        'tableId': tableId,
+        'roster[tableId] 존재': !!(rosterData.roster && rosterData.roster[tableId])
+      });
+
+      if(rosterData.roster && rosterData.roster[tableId]){
+        const rosterList = rosterData.roster[tableId];
+        console.log('👥 [VIRTUAL] Table ' + tableId + ' Roster:', {
+          '총 플레이어 수': rosterList.length,
+          '플레이어 목록': rosterList.map(p => ({
+            seat: p.seat,
+            name: p.player,
+            keyplayer: p.keyplayer
+          }))
+        });
+
+        const participants = participantsOrdered_(detail);
+        console.log('🎮 [VIRTUAL] 핸드 참가자:', participants);
+
+        const keyPlayers = rosterList.filter(p => p.keyplayer && participants.includes(String(p.seat)));
+        console.log('⭐ [VIRTUAL] 키플레이어 필터링 결과:', {
+          '키플레이어 수': keyPlayers.length,
+          '키플레이어 목록': keyPlayers.map(p => ({
+            seat: p.seat,
+            name: p.player
+          }))
+        });
+      } else {
+        console.log('❌ [VIRTUAL] roster[tableId] 없음 - rosterList가 빈 배열됨');
+      }
+    } else {
+      console.log('✅ [VIRTUAL] J열 정상 생성 (길이: ' + J.length + ')');
+    }
 
     // 5. 비연속 컬럼 쓰기 (E,F,G,H,J => 5,6,7,8,10)
+    console.log('💾 [VIRTUAL] 시트 쓰기 시작 (Row: ' + pickRow + ')');
     sh.getRange(pickRow, 5, 1, 1).setValue(E);
+    console.log('  ✓ E열 (col 5) 완료');
     sh.getRange(pickRow, 6, 1, 1).setValue(F);
+    console.log('  ✓ F열 (col 6) 완료');
     sh.getRange(pickRow, 7, 1, 1).setValue(G);
+    console.log('  ✓ G열 (col 7) 완료');
     sh.getRange(pickRow, 8, 1, 1).setValue(H);
+    console.log('  ✓ H열 (col 8) 완료');
     sh.getRange(pickRow,10, 1, 1).setValue(J);
+    console.log('  ✓ J열 (col 10) 완료 - 입력값:', J.slice(0, 100) + (J.length > 100 ? '...' : ''));
 
     log_('PUSH_VIRTUAL_OK', `row=${pickRow}`, '');
     const result = {success:true, row:pickRow};
+    console.log('🎉 [VIRTUAL] 완료 - Row ' + pickRow + '에 데이터 입력 성공');
     console.log('sendHandToVirtual returning:', JSON.stringify(result));
     return result;
   });
@@ -742,36 +852,46 @@ function finalPot_(detail){
 }
 
 /* === J열 자막 (키플레이어) === */
-function buildSubtitle_(detail, bb, eliminated){
+function buildSubtitle_(detail, payload){
   const head = detail.head || {};
   const tableId = head.table_id;
-  const r = readRoster_().roster || {};
-  const rosterList = r[tableId] || [];
 
-  // 핸드 참가자 추출
-  const participants = participantsOrdered_(detail);
+  // payload 구조 분해
+  const selectedSeats = payload.selectedSeats || [];
+  const eliminatedSeats = payload.eliminatedSeats || [];
+  const stackOverrides = payload.stackOverrides || {};
+  const bb = payload.bbOverride || 0;
 
-  // 키플레이어 필터링 (핸드 참가자 + keyplayer=true)
+  // 🔧 FIX: readRoster_() 반환값 구조 수정 (.roster 1번만 접근)
+  const rosterData = readRoster_();
+  const rosterList = (rosterData.roster && rosterData.roster[tableId]) || [];
+
+  // 선택된 플레이어 필터링 (selectedSeats에 포함 + keyplayer=true)
   const keyPlayers = rosterList.filter(p =>
-    p.keyplayer && participants.includes(String(p.seat))
+    p.keyplayer && selectedSeats.includes(String(p.seat))
   );
 
-  if(keyPlayers.length === 0) return ''; // 키플레이어 없음
+  if(keyPlayers.length === 0) return ''; // 선택된 키플레이어 없음
+
+  // 🔧 v3.0.0: eliminatedSeats 배열 처리 (복수 플레이어 개별 탈락 표시)
+  const eliminatedSet = new Set((eliminatedSeats || []).map(String));
 
   // 각 키플레이어별 자막 생성
   const lines = keyPlayers.map(kp => {
-    const name = kp.player || `S${kp.seat}`;
+    const seatStr = String(kp.seat);
+    const name = kp.player || `S${seatStr}`;
     const nation = kp.nation || '';
-
-    // 스택 계산: stacks_json에서 해당 좌석의 최종 스택
-    const stacks = safeParseJson_(head.stacks_json || '{}');
-    const finalStack = stacks[String(kp.seat)] || 0;
-
     const line1 = `${name} / ${nation}`;
 
-    if(eliminated){
+    // 해당 seat이 eliminatedSeats에 포함되면 ELIMINATED 표시
+    if(eliminatedSet.has(seatStr)){
       return `${line1}\nELIMINATED`;
     }
+
+    // 스택 계산: stackOverrides가 있으면 우선 사용, 없으면 stacks_json 사용
+    const finalStack = stackOverrides[seatStr] !== undefined
+      ? toInt_(stackOverrides[seatStr])
+      : (safeParseJson_(head.stacks_json || '{}')[seatStr] || 0);
 
     const bbv = toInt_(bb);
     const stackBB = bbv > 0 ? `${Math.round(finalStack / bbv)}BB` : '';
