@@ -8,9 +8,18 @@
 
 // VERSION.json 내용을 여기 복사 (syncVersionFromJson 실행 시 ScriptProperties에 저장됨)
 const VERSION_JSON = {
-  "current": "3.3.3",
+  "current": "3.3.4",
   "date": "2025-01-15",
   "changelog": {
+    "3.3.4": {
+      "date": "2025-01-15",
+      "type": "patch",
+      "changes": [
+        "VIRTUAL 시트 K열에 '버추얼 테이블' 자동 입력",
+        "updateExternalVirtual_() 및 sendHandToVirtual() 함수 K열 쓰기 추가",
+        "VIRTUAL 전송 로그 메시지에 K열 입력 기록 추가"
+      ]
+    },
     "3.3.3": {
       "date": "2025-01-15",
       "type": "patch",
@@ -591,14 +600,15 @@ function updateExternalVirtual_(sheetId, detail, ext){
   const H = buildHistoryBlock_(detail, ext && toInt_(ext.bb)); // 3줄 요약
   const J = ''; // v1.1: 승자 자막 삭제
 
-  log_('EXT_VALUES', `row=${pickRow} E=${E} F=${F} G=${G} H=${(H||'').slice(0,80)}... J(blank)`);
+  log_('EXT_VALUES', `row=${pickRow} E=${E} F=${F} G=${G} H=${(H||'').slice(0,80)}... J(blank) K=버추얼 테이블`);
 
-  // 비연속 컬럼 쓰기(E,F,G,H,J => 5,6,7,8,10)
+  // 비연속 컬럼 쓰기(E,F,G,H,J,K => 5,6,7,8,10,11)
   sh.getRange(pickRow, 5, 1, 1).setValue(E);
   sh.getRange(pickRow, 6, 1, 1).setValue(F);
   sh.getRange(pickRow, 7, 1, 1).setValue(G);
   sh.getRange(pickRow, 8, 1, 1).setValue(H);
   sh.getRange(pickRow,10, 1, 1).setValue(J);
+  sh.getRange(pickRow,11, 1, 1).setValue('버추얼 테이블');
 
   log_('EXT_OK', `row=${pickRow}`);
   return {updated:true, row:pickRow};
@@ -737,7 +747,7 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       console.log('✅ [VIRTUAL] J열 정상 생성 (길이: ' + J.length + ')');
     }
 
-    // 5. 비연속 컬럼 쓰기 (E,F,G,H,J => 5,6,7,8,10)
+    // 5. 비연속 컬럼 쓰기 (E,F,G,H,J,K => 5,6,7,8,10,11)
     console.log('💾 [VIRTUAL] 시트 쓰기 시작 (Row: ' + pickRow + ')');
     sh.getRange(pickRow, 5, 1, 1).setValue(E);
     console.log('  ✓ E열 (col 5) 완료');
@@ -749,6 +759,8 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     console.log('  ✓ H열 (col 8) 완료');
     sh.getRange(pickRow,10, 1, 1).setValue(J);
     console.log('  ✓ J열 (col 10) 완료 - 입력값:', J.slice(0, 100) + (J.length > 100 ? '...' : ''));
+    sh.getRange(pickRow,11, 1, 1).setValue('버추얼 테이블');
+    console.log('  ✓ K열 (col 11) 완료 - 입력값: 버추얼 테이블');
 
     log_('PUSH_VIRTUAL_OK', `row=${pickRow}`, '');
     const result = {success:true, row:pickRow};

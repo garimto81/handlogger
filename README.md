@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.3.3
+# Poker Hand Logger v3.3.4
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -14,19 +14,24 @@
 
 ---
 
-## ✨ v3.3.3 (2025-01-15) - BB 값 저장 및 Review UX 개선
+## ✨ v3.3.4 (2025-01-15) - VIRTUAL K열 테이블명 추가
 
 ### Changes
+- 📝 **K열 자동 입력**: VIRTUAL 시트 전송 시 K열에 "버추얼 테이블" 자동 입력
+- 🔧 **함수 업데이트**: updateExternalVirtual_() 및 sendHandToVirtual() K열 쓰기 추가
+- 📊 **로그 개선**: K열 입력 성공 메시지 console.log 출력
+
+---
+
+## 📋 이전 버전
+
+### v3.3.3 (2025-01-15) - BB 값 저장 및 Review UX 개선
 - 💾 **HANDS 시트 확장**: bb_amount 컬럼 추가 (핸드별 BB 값 저장)
 - 🎯 **Review VIRTUAL BB**: 핸드 저장 시 BB 값 우선 표시 (전역 설정값 fallback)
 - 🎨 **VIRTUAL UI 개선**: 세로 방향 레이아웃 (가독성 향상, 플레이어별 별도 줄)
 - ⚡ **자동 핸드 선택**: Review 탭 첫 열기 시 최신 핸드 자동 로드
 - 🔢 **숫자 포맷팅 유지**: BB/스택 입력 시 3자리 콤마 표시
 - 🔄 **하위 호환**: bb_amount 없는 기존 핸드 정상 작동
-
----
-
-## 📋 이전 버전
 
 ### v3.3.1 (2025-01-15) - Record 탭 VIRTUAL 전송 제거
 - ♻️ Record 탭 단순화: VIRTUAL 전송 기능을 Review 탭으로 완전 이전
