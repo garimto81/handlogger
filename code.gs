@@ -8,9 +8,21 @@
 
 // VERSION.json 내용을 여기 복사 (syncVersionFromJson 실행 시 ScriptProperties에 저장됨)
 const VERSION_JSON = {
-  "current": "2.9.0",
-  "date": "2025-10-13",
+  "current": "3.3.3",
+  "date": "2025-01-15",
   "changelog": {
+    "3.3.3": {
+      "date": "2025-01-15",
+      "type": "patch",
+      "changes": [
+        "HANDS 시트에 bb_amount 컬럼 추가 (핸드별 BB 값 저장)",
+        "Review 탭 VIRTUAL Section - 핸드 저장된 BB 우선 표시",
+        "VIRTUAL Section UI 개선 - 세로 방향 레이아웃 (가독성 향상)",
+        "Review 탭 첫 열기 시 최신 핸드 자동 선택 및 상세 표시",
+        "BB 입력/스택 입력 숫자 포맷팅 유지 (3자리 콤마)",
+        "하위 호환성 100% 유지 (bb_amount 없는 기존 핸드 정상 작동)"
+      ]
+    },
     "2.9.0": {
       "date": "2025-10-13",
       "type": "minor",
@@ -140,7 +152,7 @@ function ensureSheets_(){
     'hand_id','client_uuid','table_id','hand_no',
     'start_street','started_at','ended_at','btn_seat',
     'board_f1','board_f2','board_f3','board_turn','board_river',
-    'pre_pot','winner_seat','pot_final','stacks_json','holes_json','schema_ver'
+    'pre_pot','bb_amount','winner_seat','pot_final','stacks_json','holes_json','schema_ver'
   ]);
   setHeaderIfEmpty_(getOrCreateSheet_(ss,SH.ACTS),[
     'hand_id','seq','street','seat','action',
@@ -339,6 +351,7 @@ function _saveCore_(payload){
     String(payload.start_street||''), String(payload.started_at||new Date().toISOString()), String(payload.ended_at||''), String(payload.btn_seat||''),
     String(b.f1||''), String(b.f2||''), String(b.f3||''), String(b.turn||''), String(b.river||''),
     Number(payload.pre_pot||0),
+    Number(payload.bb_amount||0), // v3.3.3: BB 값 저장
     '', // winner_seat 제거(v1.1) — 공란 유지
     String(payload.pot_final||''),
     JSON.stringify(payload.stack_snapshot||{}),
@@ -480,6 +493,7 @@ function getHandDetail(hand_id){
             river: r[m['board_river']] || ''
           },
           pre_pot: Number(r[m['pre_pot']] || 0),
+          bb_amount: Number(r[m['bb_amount']] || 0), // v3.3.3: BB 값 반환
           winner_seat: '', // v1.1: winner 제거
           pot_final: String(r[m['pot_final']] || ''),
           stacks_json: String(r[m['stacks_json']]||'{}'),
@@ -758,13 +772,159 @@ function payloadHeadFrom_(p){
 
 function buildFileName_(detail){
   const head=detail.head||{};
+
+  // 1. 등록시간 (started_at에서 HH:mm 추출)
+  const timeHHMM = extractTimeHHMM_(head.started_at || '');
+  const timeFormatted = timeHHMM.replace(':', ''); // "14:30" → "1430"
+
+  // 2. hand_no를 4자리 숫자로 포맷팅 (0001~9999)
+  const handNo = String(head.hand_no || '0').padStart(4, '0');
+
+  // 3. 키플레이어 이름 추출
+  const keyplayerName = extractKeyplayerName_(head.table_id, detail);
+
+  // 4. 핸드 요약 생성
+  const handSummary = generateHandSummary_(detail);
+
+  // 형식: {HHMM}_VT{XXXX}_{키플레이어}_{핸드}
+  // 예: 1430_VT0127_Smith_AKvsQQ
+  return `${timeFormatted}_VT${handNo}_${keyplayerName}_${handSummary}`;
+}
+
+/* === 키플레이어 이름 추출 (최대 20자) === */
+function extractKeyplayerName_(tableId, detail){
   const seatsOrder = participantsOrdered_(detail);
-  const parts = seatsOrder.map(seat => {
-    const name = nameShort_(head.table_id, seat);
-    const cards = holes2_(head.holes_json, seat);
-    return name + (cards ? `_${cards.join('')}` : '');
-  });
-  return `VT${head.hand_no||'-'}_${parts.join('_vs_')}`;
+  const rosterData = readRoster_();
+  const rosterList = (rosterData.roster && rosterData.roster[tableId]) || [];
+
+  // 키플레이어만 필터링
+  const keyPlayers = seatsOrder
+    .map(seatStr => rosterList.find(p => String(p.seat) === String(seatStr)))
+    .filter(p => p && p.keyplayer);
+
+  if(keyPlayers.length === 0){
+    // 키플레이어 없으면 첫 번째 참가자 사용
+    const firstPlayer = seatsOrder
+      .map(seatStr => rosterList.find(p => String(p.seat) === String(seatStr)))
+      .filter(Boolean)[0];
+
+    return firstPlayer ? extractLastName_(firstPlayer.player) : 'Unknown';
+  }
+
+  // 1명: 성만
+  if(keyPlayers.length === 1){
+    return extractLastName_(keyPlayers[0].player);
+  }
+
+  // 2명: 하이픈 연결
+  if(keyPlayers.length === 2){
+    const name1 = extractLastName_(keyPlayers[0].player);
+    const name2 = extractLastName_(keyPlayers[1].player);
+    return `${name1}-${name2}`;
+  }
+
+  // 3명 이상: 첫 2명 + 숫자
+  const name1 = extractLastName_(keyPlayers[0].player);
+  const name2 = extractLastName_(keyPlayers[1].player);
+  const extra = keyPlayers.length - 2;
+  return `${name1}-${name2}+${extra}`;
+}
+
+/* === 성(Last Name) 추출 === */
+function extractLastName_(fullName){
+  if(!fullName) return 'Unknown';
+  const parts = String(fullName).trim().split(/\s+/);
+
+  // 1단어: 전체 사용
+  if(parts.length === 1) return parts[0];
+
+  // 2단어 이상: 마지막 단어 (성)
+  return parts[parts.length - 1];
+}
+
+/* === 핸드 요약 생성 (최대 15자) === */
+function generateHandSummary_(detail){
+  const head = detail.head || {};
+  const acts = detail.acts || [];
+  const seatsOrder = participantsOrdered_(detail);
+
+  // 보드 카드 수 확인
+  const board = [head.board?.f1, head.board?.f2, head.board?.f3, head.board?.turn, head.board?.river].filter(Boolean);
+  const boardCount = board.length;
+
+  // 홀카드 정보
+  const holes = safeParseJson_(head.holes_json || '{}');
+
+  // 프리플랍 올인 (보드 없음)
+  if(boardCount === 0){
+    // 2명 핸드: 홀카드 대결
+    if(seatsOrder.length === 2){
+      const h1 = holes2_(head.holes_json, seatsOrder[0]);
+      const h2 = holes2_(head.holes_json, seatsOrder[1]);
+
+      if(h1 && h2){
+        const hand1 = simplifyHoleCards_(h1);
+        const hand2 = simplifyHoleCards_(h2);
+        return `${hand1}vs${hand2}`;
+      }
+    }
+    return 'Preflop';
+  }
+
+  // 플랍 이후: 특징 분석
+  if(boardCount >= 3){
+    // Flush 가능성 체크
+    const suits = board.map(c => cardCode_(c).slice(-1));
+    const suitCounts = {};
+    suits.forEach(s => suitCounts[s] = (suitCounts[s] || 0) + 1);
+    const maxSuitCount = Math.max(...Object.values(suitCounts));
+
+    if(maxSuitCount >= 3){
+      return 'FlushDraw';
+    }
+
+    // Straight 가능성 체크 (간단한 로직)
+    const ranks = board.map(c => {
+      const r = cardCode_(c).slice(0, -1);
+      const rankMap = {A:14,K:13,Q:12,J:11,T:10};
+      return rankMap[r] || parseInt(r, 10);
+    }).sort((a,b) => b-a);
+
+    if(ranks.length >= 3 && (ranks[0] - ranks[ranks.length-1]) <= 4){
+      return 'StraightDraw';
+    }
+  }
+
+  // 기본: 스트릿 표시
+  if(boardCount === 3) return 'Flop';
+  if(boardCount === 4) return 'Turn';
+  if(boardCount === 5) return 'River';
+
+  return 'Unknown';
+}
+
+/* === 홀카드 간소화 (AsAh → AA) === */
+function simplifyHoleCards_(holeArray){
+  if(!holeArray || holeArray.length !== 2) return 'XX';
+
+  const c1 = cardCode_(holeArray[0]);
+  const c2 = cardCode_(holeArray[1]);
+
+  if(!c1 || !c2) return 'XX';
+
+  const r1 = c1.slice(0, -1);
+  const r2 = c2.slice(0, -1);
+  const s1 = c1.slice(-1);
+  const s2 = c2.slice(-1);
+
+  // 페어: AA, KK, QQ
+  if(r1 === r2) return r1 + r1;
+
+  // 수티드: AKs, QJs
+  if(s1 === s2) return r1 + r2 + 's';
+
+  // 오프수티드: AKo, QJo
+  return r1 + r2 + 'o';
 }
 
 function buildHistoryBlock_(detail, bb){
@@ -851,7 +1011,7 @@ function finalPot_(detail){
   return pot;
 }
 
-/* === J열 자막 (키플레이어) === */
+/* === J열 자막 (선택된 플레이어) === */
 function buildSubtitle_(detail, payload){
   const head = detail.head || {};
   const tableId = head.table_id;
@@ -862,29 +1022,35 @@ function buildSubtitle_(detail, payload){
   const stackOverrides = payload.stackOverrides || {};
   const bb = payload.bbOverride || 0;
 
+  if(selectedSeats.length === 0) return ''; // 선택된 플레이어 없음
+
   // 🔧 FIX: readRoster_() 반환값 구조 수정 (.roster 1번만 접근)
   const rosterData = readRoster_();
   const rosterList = (rosterData.roster && rosterData.roster[tableId]) || [];
 
-  // 선택된 플레이어 필터링 (selectedSeats에 포함 + keyplayer=true)
-  const keyPlayers = rosterList.filter(p =>
-    p.keyplayer && selectedSeats.includes(String(p.seat))
-  );
+  // 🔧 v3.3.2: selectedSeats에 포함된 모든 플레이어 자막 생성 (keyplayer 무관)
+  const selectedPlayers = selectedSeats
+    .map(seatStr => rosterList.find(p => String(p.seat) === String(seatStr)))
+    .filter(Boolean); // undefined 제거
 
-  if(keyPlayers.length === 0) return ''; // 선택된 키플레이어 없음
+  if(selectedPlayers.length === 0) {
+    Logger.log('⚠️ [SUBTITLE] 선택된 플레이어의 roster 정보 없음');
+    return '';
+  }
 
   // 🔧 v3.0.0: eliminatedSeats 배열 처리 (복수 플레이어 개별 탈락 표시)
   const eliminatedSet = new Set((eliminatedSeats || []).map(String));
 
-  // 각 키플레이어별 자막 생성
-  const lines = keyPlayers.map(kp => {
-    const seatStr = String(kp.seat);
-    const name = kp.player || `S${seatStr}`;
-    const nation = kp.nation || '';
+  // 각 선택된 플레이어별 자막 생성
+  const lines = selectedPlayers.map(p => {
+    const seatStr = String(p.seat);
+    const name = p.player || `S${seatStr}`;
+    const nation = p.nation || '';
     const line1 = `${name} / ${nation}`;
 
     // 해당 seat이 eliminatedSeats에 포함되면 ELIMINATED 표시
     if(eliminatedSet.has(seatStr)){
+      Logger.log(`🔴 [SUBTITLE] ${name} (seat ${seatStr}) - ELIMINATED`);
       return `${line1}\nELIMINATED`;
     }
 
@@ -899,6 +1065,7 @@ function buildSubtitle_(detail, payload){
       ? `${numComma_(finalStack)} (${stackBB})`
       : numComma_(finalStack);
 
+    Logger.log(`✅ [SUBTITLE] ${name} (seat ${seatStr}) - STACK: ${stackText}`);
     return `${line1}\nCURRENT STACK - ${stackText}`;
   });
 

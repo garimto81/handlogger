@@ -1,4 +1,4 @@
-<!-- index — Poker Hand Logger — v3.3.1 (2025-01-15) -->
+<!-- index — Poker Hand Logger — v3.3.3 (2025-01-15) -->
 <!doctype html>
 <html lang="ko">
 <head>
@@ -11,9 +11,9 @@
 :root{font-size:28px;--bg:#0b0d12;--panel:#101522;--line:#1f2435;--muted:#9aa3b2;--acc:#2a6fff;--text:#e7eaf0}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;height:100vh;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-body{display:grid;grid-template-rows:8vh 1fr 12vh;grid-template-areas:"header" "main" "footer"}
-header{grid-area:header;display:flex;justify-content:space-between;align-items:center;padding:0 14px;background:#0f1320;border-bottom:1px solid #222}
-footer{grid-area:footer;display:flex;align-items:center;padding:0 14px;background:#0f1320;border-top:1px solid #222}
+body{display:grid;grid-template-rows:6vh 1fr auto;grid-template-areas:"header" "main" "footer"}
+header{grid-area:header;display:flex;justify-content:space-between;align-items:center;padding:0 10px;background:#0f1320;border-bottom:1px solid #222;font-size:0.8rem}
+footer{grid-area:footer;position:sticky;bottom:0;padding:8px 10px;background:#0f1320;border-top:2px solid var(--acc);z-index:10}
 .wrap{grid-area:main;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
 h3{margin:0 0 10px;color:#a9b8ff;font-size:1rem}
@@ -21,7 +21,7 @@ label{font-size:.8rem;color:var(--muted)}
 select,input,button{background:#0f1320;color:var(--text);border:1px solid #2a3249;border-radius:12px;padding:12px;font-size:1rem}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .grid{display:grid;gap:10px}.g2{grid-template-columns:1fr 1fr}
-.pill{display:inline-flex;padding:8px 10px;border:1px solid #2a3249;border-radius:999px;cursor:pointer}
+.pill{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 8px;border:1px solid #2a3249;border-radius:999px;cursor:pointer;font-size:0.75rem}
 .pill.active{background:#223266;border-color:var(--acc)}
 .seatCard{padding:10px;border:1px dashed #2a3249;border-radius:12px}
 .small{font-size:.8rem}.muted{color:var(--muted)}
@@ -127,84 +127,88 @@ select#tableSel:has(option.keyplayer-option:checked) {
 </style>
 </head>
 <body>
-<header class="row" style="justify-content:space-between">
-  <div><strong>Poker Hand Logger</strong><span class="muted small"> · 모바일 최적화 · 기여액 기반 · v3.3.0</span></div>
-  <div class="row">
-    <button id="modeRecord" type="button" class="btnPrimary">Record</button>
-    <button id="modeReview" type="button">Review</button>
+<header>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:6px;height:6px;background:var(--acc);border-radius:50%"></span>
+    <strong id="currentMode">Record</strong>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="muted small">v3.3.3</span>
+    <button id="modeRecord" type="button" class="btnPrimary" style="padding:4px 12px;height:auto;font-size:0.7rem">Rec</button>
+    <button id="modeReview" type="button" style="padding:4px 12px;height:auto;font-size:0.7rem">Rev</button>
   </div>
 </header>
 
+<!-- v3.3.2: 로딩 프로그레스 -->
+<div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(11,13,18,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100">
+  <div style="text-align:center">
+    <div style="font-size:1.2rem;font-weight:700;margin-bottom:20px">Poker Hand Logger</div>
+    <div style="width:280px;height:6px;background:#1f2435;border-radius:3px;overflow:hidden;margin-bottom:12px">
+      <div id="loadingBar" style="width:0%;height:100%;background:var(--acc);transition:width 0.3s ease"></div>
+    </div>
+    <div id="loadingText" style="font-size:0.75rem;color:var(--muted)">초기화 중...</div>
+    <div id="loadingPercent" style="font-size:0.7rem;color:#64748b;margin-top:4px">0%</div>
+  </div>
+</div>
+
 <div class="wrap">
   <div class="panel" id="panelRecord">
-    <h3>Record</h3>
-
-    <!-- BB 설정 (v2.3.0: External Sheet ID 제거) -->
-    <div class="panel" style="background:#0e1322; margin-bottom:10px">
-      <div class="row settings small">
-        <label>Big Blind(원)</label>
-        <input id="bbInput" type="text" inputmode="numeric" placeholder="예: 1,000"/>
-        <button id="saveSettingsBtn" type="button">설정 저장</button>
-      </div>
-      <div class="small muted" id="settingsMsg"></div>
+    <!-- v3.3.2: EXTREME MINIMAL - 모든 헤더 제거, placeholder로 이동 -->
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <select id="tableSel" style="width:100%"></select>
+      <input id="bbInput" type="text" inputmode="numeric" placeholder="Big Blind (예: 1,000)" style="width:100%"/>
     </div>
 
-    <div class="grid g2">
-      <div><label>테이블</label><select id="tableSel"></select></div>
-      <div><label>핸드 No.</label><input id="handNo" type="number" placeholder="자동부여(선택)"/></div>
-      <div>
-        <label>시작 스트릿(고정)</label>
-        <select id="streetStart">
-          <option value="PREFLOP">Preflop</option>
-          <option value="FLOP">Flop</option>
-          <option value="TURN">Turn</option>
-          <option value="RIVER">River</option>
-        </select>
-      </div>
-      <div><label>BTN 좌석</label><select id="btnSeat"></select></div>
-      <div style="grid-column:1/-1"><label>선 누적 팟(pre_pot, 선택)</label><input type="text" inputmode="numeric" id="prePot" placeholder="예: 12,500" style="width:100%"/></div>
+    <!-- v3.3.2: 상세 설정 (항상 표시, 헤더 없음) -->
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <input id="handNo" type="number" placeholder="핸드 No. (자동)" style="width:100%"/>
+      <select id="btnSeat" style="width:100%"><option value="">BTN 좌석</option></select>
+      <select id="streetStart" style="width:100%">
+        <option value="PREFLOP">시작: Preflop</option>
+        <option value="FLOP">시작: Flop</option>
+        <option value="TURN">시작: Turn</option>
+        <option value="RIVER">시작: River</option>
+      </select>
+      <input type="text" inputmode="numeric" id="prePot" placeholder="선 누적 팟 (예: 12,500)" style="width:100%"/>
     </div>
 
-    <div style="margin-top:10px">
-      <label>참여 좌석 선택(비참여 제외)</label>
-      <div id="seatsRow" class="row"></div>
-    </div>
+    <!-- v3.3.2: 플레이어 Pills (반응형 가로 배치) -->
+    <div id="seatsRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
 
-    <div id="stackGrid" class="grid" style="grid-template-columns:1fr; margin-top:10px"></div>
-
+    <!-- v3.3.2: 스택 접기 -->
     <div class="panel" style="margin-top:10px;background:#0e1322">
-      <div class="row small">
-        <b>보드(카드 토글)</b><span class="muted"> · A→2 / ♠→♥→♦→♣ · 재탭 해제 · 5장까지</span>
-        <span class="muted">· 현재 스트릿: <b id="curStreetTag">-</b></span>
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleStackSection()">
+        <span class="small"><b>💰 스택 & 홀카드</b> <span class="muted" id="stackSummary">0/0명</span></span>
+        <span id="stackToggle">▼</span>
       </div>
-      <div id="boardRowRecord" class="boardWrap" style="margin-top:6px"></div>
+      <div id="stackGrid" class="grid" style="grid-template-columns:1fr;margin-top:10px;display:none"></div>
     </div>
 
+    <!-- v3.3.2: 보드 - 오버레이만 -->
     <div class="panel" style="margin-top:10px;background:#0e1322">
-      <div class="row small">
-        <div>현재 차례: <b id="turnSeat">-</b></div>
-        <div>· toCall: <b id="toCall">0</b> · pot: <b id="pot">0</b></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="small"><b>🃏 보드</b> · <span class="muted" id="curStreetTag">-</span></span>
+        <button type="button" onclick="openBoardOverlay()" style="padding:4px 10px;height:auto;font-size:0.7rem">+카드</button>
       </div>
-      <div id="actionFeed" class="logbox small"></div>
+      <div id="boardDisplay" style="margin-top:6px;min-height:32px">
+        <span class="muted small">선택된 카드 없음</span>
+      </div>
     </div>
 
-    <div class="actionDock">
-      <div class="pad" id="actionPad"></div>
-
-      <div class="row" style="margin-top:8px; gap:10px;">
-        <button id="undoBtn" type="button" style="flex:1;">Undo</button>
-        <button id="newHandBtn" type="button" style="flex:1;">새 핸드</button>
+    <!-- v3.3.2: 턴 정보 + 액션 -->
+    <div class="panel" style="margin-top:10px;background:#0e1322">
+      <div class="small" style="margin-bottom:6px">
+        <div style="margin-bottom:4px">→ <b id="turnSeat">-</b></div>
+        <div class="muted">toCall: <b id="toCall">0</b> · pot: <b id="pot">0</b></div>
       </div>
 
-      <div class="row" style="margin-top:8px;">
-        <button id="commitBtn" type="button" class="btnPrimary" style="flex:1;">
-          데이터 전송(커밋)
-        </button>
+      <!-- v3.3.2: 액션 버튼 (1줄 4개, 44px) -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">
+        <div id="actionPad" style="display:contents"></div>
       </div>
 
-      <div style="margin-top:4px;">
-        <span id="commitMsg" class="small muted"></span>
-      </div>
+      <!-- v3.3.2: 액션 기록 (스크롤) -->
+      <div id="actionFeed" class="small" style="max-height:120px;overflow-y:auto;border:1px solid #1b2133;border-radius:6px;padding:6px;background:#0e1320"></div>
     </div>
   </div>
 
@@ -230,7 +234,15 @@ select#tableSel:has(option.keyplayer-option:checked) {
   </div>
 </div>
 
-<footer class="row"><span class="small muted">BTN만 · 사이드팟 자동계산 없음 · 보드 미완성 허용 · ALL-IN 금액 수동 · v3.3.1</span></footer>
+<footer>
+  <!-- v3.3.2: Sticky Footer (항상 최하단) -->
+  <div style="display:flex;gap:6px;margin-bottom:4px">
+    <button id="undoBtn" type="button" style="flex:1;padding:8px;height:44px;font-size:0.75rem">← Undo</button>
+    <button id="newHandBtn" type="button" style="flex:1;padding:8px;height:44px;font-size:0.75rem">🔄 새 핸드</button>
+    <button id="commitBtn" type="button" class="btnPrimary" style="flex:2;padding:8px;height:44px;font-size:0.8rem;font-weight:700">💾 전송</button>
+  </div>
+  <div id="commitMsg" class="small muted" style="text-align:center;min-height:16px"></div>
+</footer>
 
 <!-- v2.5.0: Bottom Sheet 홀카드 선택 -->
 <div id="overlay"><div class="box">
@@ -274,6 +286,50 @@ function cacheSet(key,data){ sessionStorage.setItem(key,JSON.stringify({timestam
 const PERF={};
 function perfStart(label){PERF[label]=performance.now();}
 function perfEnd(label){if(PERF[label])console.log(`[PERF] ${label}: ${(performance.now()-PERF[label]).toFixed(1)}ms`);}
+
+/* v3.3.2: 로딩 프로그레스 (세부 로깅 강화) */
+const LOADING = {
+  total: 6,
+  current: 0,
+  steps: [
+    '설정 데이터 로딩 중...',
+    '테이블 정보 초기화 중...',
+    'UI 컴포넌트 준비 중...',
+    '이벤트 리스너 등록 중...',
+    '화면 렌더링 중...',
+    '완료!'
+  ]
+};
+
+function updateLoading(step, percent, detail){
+  const bar = document.getElementById('loadingBar');
+  const text = document.getElementById('loadingText');
+  const percentText = document.getElementById('loadingPercent');
+
+  // 메인 메시지
+  const mainMsg = LOADING.steps[step] || '로딩 중...';
+
+  // 세부 메시지 (선택적)
+  const displayMsg = detail ? `${mainMsg} - ${detail}` : mainMsg;
+
+  if(bar) bar.style.width = percent + '%';
+  if(text) text.textContent = displayMsg;
+  if(percentText) percentText.textContent = Math.round(percent) + '%';
+
+  // 콘솔 로깅 강화
+  const timestamp = new Date().toISOString().slice(11, 23); // HH:mm:ss.SSS
+  console.log(`[${timestamp}] [LOAD] ${Math.round(percent)}% - ${displayMsg}`);
+}
+
+function hideLoading(){
+  const overlay = document.getElementById('loadingOverlay');
+  if(overlay){
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.3s';
+    setTimeout(() => overlay.style.display = 'none', 300);
+  }
+  console.log('[LOAD] 100% - 로딩 완료');
+}
 
 /* ===== v2.9.0: Keyplayer 테이블 우선 정렬 ===== */
 /**
@@ -343,20 +399,43 @@ function sortByNumber_(a, b) {
 
 /* ===== 초기 로딩 ===== */
 perfStart('init');
+updateLoading(0, 0); // Step 0: 설정 데이터 로딩 중
+
 const cachedConfig=cacheGet('phl_config');
-if(cachedConfig){ initFromConfig(cachedConfig); }
-else{ google.script.run.withSuccessHandler(d=>{cacheSet('phl_config',d); initFromConfig(d);}).getConfig(); }
+if(cachedConfig){
+  console.log('[CACHE] 캐시된 설정 사용');
+  updateLoading(0, 20, '캐시에서 로드');
+  setTimeout(() => initFromConfig(cachedConfig), 10); // 비동기로 실행 (프로그레스바 표시 시간 확보)
+}
+else{
+  console.log('[SERVER] 서버에서 설정 로딩');
+  updateLoading(0, 10, 'Google Apps Script 호출');
+  google.script.run
+    .withSuccessHandler(d=>{
+      updateLoading(0, 20, '서버 응답 수신');
+      cacheSet('phl_config',d);
+      initFromConfig(d);
+    })
+    .getConfig();
+}
 
 function initFromConfig(data){
   perfEnd('init');
+
+  // Step 1: 테이블 정보 초기화 (20% → 40%)
+  updateLoading(1, 25, 'roster 파싱 중');
   S.roster=data.roster; S.cfg=data.config||{};
 
+  updateLoading(1, 30, 'keyplayer 테이블 정렬');
   // v2.9.0: keyplayer 테이블 우선 정렬 (Record 모드용)
   S.tables = sortTablesByKeyplayer(data.tables, S.roster);
+
+  updateLoading(1, 35, '로컬 설정 복원');
   // 설정 복원 (v2.3.0: virtualSheetId는 Review용)
   S.virtualSheetId = localStorage.getItem('phl_virtualSheetId')||'';
   S.bbValue = toInt(localStorage.getItem('phl_bbSize')||'0');
 
+  updateLoading(1, 38, 'BB 입력 포맷팅');
   // v3.3.0: BB 입력 포맷팅
   const bbInput = document.getElementById('bbInput');
   bbInput.value = S.bbValue ? formatNumber(S.bbValue) : '';
@@ -372,30 +451,38 @@ function initFromConfig(data){
     e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
   });
 
-  document.getElementById('saveSettingsBtn').onclick=saveSettings_;
-  document.getElementById('settingsMsg').textContent= S.bbValue ? `BB=${formatNumber(S.bbValue)}` : 'BB를 설정하세요';
+  // v3.3.2: BB 입력 실시간 저장
+  bbInput.addEventListener('blur', saveSettings_);
 
   // Review 모드 VIRTUAL 설정 (v3.0.0: 전송 버튼 제거, 설정만 유지)
   document.getElementById('virtualSheetId').value=S.virtualSheetId;
   document.getElementById('saveVirtualBtn').onclick=saveVirtualSettings_;
   document.getElementById('virtualMsg').textContent= S.virtualSheetId ? `VIRTUAL 시트 저장됨` : 'VIRTUAL 시트ID를 설정하세요';
 
+  updateLoading(1, 39, `테이블 드롭다운 (${S.tables.length}개)`);
+
+  // v3.3.2: 데이터 로딩 검증
+  console.log('[DATA] 테이블 수:', S.tables.length);
+  console.log('[DATA] Roster 키:', Object.keys(S.roster).length);
+
   const sel=document.getElementById('tableSel');
-  // v2.9.0: keyplayer 테이블 강조 표시
-  sel.innerHTML = `<option value="">테이블 선택</option>${S.tables.map(t => {
+  // v2.9.0: keyplayer 테이블 강조 표시 (v3.3.2: placeholder 간소화)
+  sel.innerHTML = `<option value="">테이블</option>${S.tables.map(t => {
     const players = S.roster[t] || [];
     const keyplayerCount = players.filter(p => p.keyplayer === true).length;
     const isKeyplayer = keyplayerCount > 0;
 
     // ⭐ 아이콘 + keyplayer 수 표시
     const label = isKeyplayer
-      ? `⭐ Table ${t} (${keyplayerCount} Key Player${keyplayerCount > 1 ? 's' : ''})`
+      ? `⭐ Table ${t} (${keyplayerCount} Key)`
       : `Table ${t}`;
     const className = isKeyplayer ? 'keyplayer-option' : '';
 
     return `<option value="${t}" class="${className}">${label}</option>`;
   }).join('')}`;
   sel.onchange=onTableChange;
+
+  console.log('[DATA] 드롭다운 옵션 수:', sel.options.length);
 
   const streetSel=document.getElementById('streetStart');
   streetSel.onchange=e=>{ S.startStreetInit=e.target.value; S.curStreet=S.startStreetInit; resetHandState(false); renderAll(); };
@@ -418,6 +505,9 @@ function initFromConfig(data){
     const diff = newLen - oldLen;
     e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
   });
+  updateLoading(1, 40, '테이블 초기화 완료');
+
+  updateLoading(2, 45, 'handNo 입력 필드');
   // v3.3.0: handNo 입력 필드 - 자동 채움 + 수동 수정 가능
   const handNoInput = document.getElementById('handNo');
   handNoInput.oninput = e => {
@@ -427,40 +517,71 @@ function initFromConfig(data){
     }
   };
 
+  // Step 2: UI 컴포넌트 준비 (40% → 60%)
+  updateLoading(2, 50, 'UI 컴포넌트 완료');
+
+  // Step 3: 이벤트 리스너 등록 (60% → 75%)
+  updateLoading(3, 60, 'Undo/Commit 버튼');
+
   document.getElementById('undoBtn').onclick=undoOnce;
   document.getElementById('commitBtn').onclick=commitHand;
   document.getElementById('newHandBtn').onclick=()=>resetHandState(true);
+
+  updateLoading(3, 65, 'Review 모드 버튼');
   document.getElementById('refreshList').onclick=()=>loadList(true);
   document.getElementById('modeRecord').onclick=()=>setMode('record');
   document.getElementById('modeReview').onclick=()=>setMode('review');
 
+  updateLoading(3, 70, '무한 스크롤 등록');
   // v1.2.0: 무한 스크롤
   document.getElementById('list').addEventListener('scroll', e=>{
     const el=e.target; if(el.scrollHeight-el.scrollTop-el.clientHeight<100) loadList(false);
   });
 
-  setMode('record');
-  buildBoardUI('boardRowRecord', toggleBoardCard);
-  buildBoardUI('boardRowOverlay', pickCardOverlay);
-  document.getElementById('streetStart').value=S.startStreetInit;
-  renderAll();
-  loadList();
+  updateLoading(3, 75, '이벤트 리스너 완료');
 
+  // Step 4: 화면 렌더링 (75% → 90%)
+  updateLoading(4, 80, 'Record 모드 설정');
+
+  setMode('record');
+  // v3.3.2: 보드 UI 지연 생성 (Lazy Loading - 사용 시 생성)
+  document.getElementById('streetStart').value=S.startStreetInit;
+
+  updateLoading(4, 85, '화면 렌더링');
+  renderAll();
+  // v3.3.2: Review 리스트 지연 로딩 (모드 전환 시 로딩)
+
+  updateLoading(4, 90, '렌더링 완료');
+
+  updateLoading(5, 92, '다음 핸드 번호 조회 중');
   // v3.3.0: 앱 시작 시 다음 핸드 번호 조회
-  initNextHandNo();
+  // v3.3.2: 비동기 완료 후 로딩 숨김
+  initNextHandNo(() => {
+    // Step 5: 완료 (90% → 100%)
+    updateLoading(5, 100, '초기화 완료');
+
+    // v3.3.2: 데이터 검증 완료 (핵심 설정이 항상 표시되므로 자동 열기 불필요)
+
+    setTimeout(hideLoading, 300);
+  });
 }
 
 /* ===== v3.3.0: Auto Hand Number ===== */
-function initNextHandNo() {
+function initNextHandNo(callback) {
+  updateLoading(5, 93, 'getNextHandNo API 호출');
   google.script.run
     .withSuccessHandler(num => {
+      updateLoading(5, 97, `다음 핸드 #${num} 확인`);
       S.nextHandNo = num;
       updateHandNoDisplay();
+      if(callback) callback(); // v3.3.2: 완료 콜백
     })
     .withFailureHandler(err => {
       console.error('getNextHandNo failed:', err);
+      updateLoading(5, 97, 'fallback 핸드 #1');
       S.nextHandNo = 1; // fallback
       updateHandNoDisplay();
+      if(callback) callback(); // v3.3.2: 실패해도 로딩 종료
     })
     .getNextHandNo();
 }
@@ -477,8 +598,7 @@ function saveSettings_(){
   // v3.3.0: 포맷팅된 입력값 파싱
   S.bbValue = parseFormattedNumber(document.getElementById('bbInput').value||'0');
   localStorage.setItem('phl_bbSize', S.bbValue);
-  document.getElementById('settingsMsg').textContent=`저장됨 (BB=${formatNumber(S.bbValue)})`;
-  setTimeout(()=>document.getElementById('settingsMsg').textContent='',1500);
+  console.log('[SAVE] BB 저장:', S.bbValue);
 }
 
 function saveVirtualSettings_(){
@@ -494,7 +614,15 @@ function setMode(m){
   if(m==='record'){
     rec.classList.remove('hidden'); rev.classList.add('hidden'); bR.classList.add('btnPrimary'); bV.classList.remove('btnPrimary');
   }
-  else{rev.classList.remove('hidden'); rec.classList.add('hidden'); bV.classList.add('btnPrimary'); bR.classList.remove('btnPrimary'); loadList(true);}
+  else{
+    rev.classList.remove('hidden'); rec.classList.add('hidden'); bV.classList.add('btnPrimary'); bR.classList.remove('btnPrimary');
+    // v3.3.2: 첫 Review 모드 전환 시에만 리스트 로드
+    if(!reviewState.loaded){
+      console.log('[LAZY] Review 리스트 첫 전환 시 로딩');
+      loadList(true);
+      reviewState.loaded = true;
+    }
+  }
 }
 
 /* ===== 테이블 변경 ===== */
@@ -559,7 +687,10 @@ function renderAll(){
   // v2.6.0: requestAnimationFrame으로 렌더링 최적화
   requestAnimationFrame(()=>{
     renderSeatToggles(); renderStackGrid(); renderActionPad(); renderTurnSeat(); renderPot(); renderFeed();
-    syncBoardSelection('boardRowRecord'); document.getElementById('curStreetTag').textContent=S.curStreet;
+    document.getElementById('curStreetTag').textContent=S.curStreet;
+    // v3.3.2: 요약 업데이트
+    updateHandSummary();
+    updateBoardDisplay();
   });
 }
 
@@ -578,18 +709,19 @@ function seatNameOnly(seat,name){
 
 function renderSeatToggles(){
   const box=document.getElementById('seatsRow');
-  if(!S.seats.length){box.innerHTML='<span class="muted small">테이블을 먼저 선택</span>'; return;}
+  if(!S.seats.length){box.innerHTML='<span class="muted small">테이블 선택</span>'; return;}
   box.innerHTML='';
   S.seats.forEach(s=>{
     const el=document.createElement('div');
-    // v2.4.0: keyplayer 체크
     const rosterEntry=(S.roster[S.curTable]||[]).find(r=>toInt(r.seat)===s.seat);
     const isKey=rosterEntry && rosterEntry.keyplayer;
     const isActive=S.activeSeatMap[s.seat];
-    // v3.2.1: keyplayer 하이라이트는 active일 때만 표시
+    // v3.3.2: 반응형 Pills (최소 크기, flex 자동 배치)
     el.className='pill '+(isKey && isActive?'keyplayer ':'')+(isActive?'active':'');
-    el.textContent=(isKey?'⭐ ':'')+seatShort(s.seat,s.name);
-    el.title=isKey?'키플레이어 (J열 자막 생성)':'';
+    el.style.minWidth='44px';
+    el.style.flex='0 1 auto';
+    el.textContent=(isKey?'⭐':'')+s.seat;
+    el.title=(isKey?'⭐ ':'')+(s.name || 'Seat '+s.seat);
     el.onclick=()=>{ if(S.actions.length>0) return; S.activeSeatMap[s.seat]=!S.activeSeatMap[s.seat]; buildTurnOrder(); renderAll(); };
     box.appendChild(el);
   });
@@ -631,14 +763,19 @@ function renderStackGrid(){
       const newLen = formatted.length;
       const diff = newLen - oldLen;
       e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
+      // v3.3.2: 스택 요약 업데이트
+      updateStackSummary();
     });
   });
+  // v3.3.2: 스택 그리드 렌더 후 요약 업데이트
+  updateStackSummary();
 }
 window.S_setStack=(seat,v)=>{ S.stacks[seat]=parseFormattedNumber(v); };
 
 function renderActionPad(){
   const pad=document.getElementById('actionPad'); pad.innerHTML='';
-  const seat=currentActorSeat(); if(!seat){pad.innerHTML='<button type="button" disabled>대기</button>'; return;}
+  const seat=currentActorSeat();
+  if(!seat) return; // v3.3.2: 대기 버튼 제거 (액션 없으면 비움)
   const hasToCall=S.toCall>0;
   (hasToCall?['CALL','RAISE','FOLD','ALLIN']:['CHECK','BET','FOLD','ALLIN']).forEach(kind=>{
     const el=document.createElement('button'); el.type='button'; el.textContent=kind; el.onclick=()=>onAction(kind,seat); pad.appendChild(el);
@@ -724,7 +861,10 @@ function undoOnce(){
 
 /* ===== 카드 UI ===== */
 function buildBoardUI(containerId, handler){
+  // v3.3.2: DocumentFragment로 한번에 DOM 추가 (리플로우 최소화)
   const box=document.getElementById(containerId); box.innerHTML='';
+  const fragment = document.createDocumentFragment();
+
   SUITS.forEach(s=>{
     const col=document.createElement('div'); col.className='suitCol';
     RANKS.forEach(r=>{
@@ -735,8 +875,10 @@ function buildBoardUI(containerId, handler){
       el.onclick=()=>handler(c,el);
       col.appendChild(el);
     });
-    box.appendChild(col);
+    fragment.appendChild(col);
   });
+
+  box.appendChild(fragment); // 단일 리플로우
 }
 function prettyCard(cs){
   if(!cs) return ''; const cc=cardCode(cs); const suit=cc.slice(-1), r=cc.slice(0,-1);
@@ -744,9 +886,18 @@ function prettyCard(cs){
 }
 function toggleBoardCard(card,el){
   const i=S.board.indexOf(card);
-  if(i>=0){S.board.splice(i,1); el.classList.remove('sel'); vibrate(HAPTIC.LIGHT); return;}
+  if(i>=0){
+    S.board.splice(i,1);
+    el.classList.remove('sel');
+    vibrate(HAPTIC.LIGHT);
+    updateBoardDisplay(); // v3.3.2
+    return;
+  }
   if(S.board.length>=5) return;
-  S.board.push(card); el.classList.add('sel'); vibrate(HAPTIC.MEDIUM);
+  S.board.push(card);
+  el.classList.add('sel');
+  vibrate(HAPTIC.MEDIUM);
+  updateBoardDisplay(); // v3.3.2
 }
 function syncBoardSelection(id){
   const box=document.getElementById(id); if(!box) return;
@@ -764,6 +915,11 @@ function labelToCode(label){
 /* 홀카드 오버레이(2장 연속 선택) — 보드중복 차단(단방향) */
 function openHoleOverlay(seat){
   S.holePickSeat=seat;
+
+  // v3.3.2: 홀카드 핸들러로 재빌드 (보드와 분리)
+  console.log('[FIX] 홀카드 UI - pickCardOverlay 핸들러 연결');
+  buildBoardUI('boardRowOverlay', pickCardOverlay);
+
   document.getElementById('ovTitle').textContent=`${seatNameOnly(seat, getSeatName(seat))} · 홀카드`;
   updateOvCount_(seat);
   // v2.5.0: Bottom Sheet 애니메이션
@@ -771,6 +927,28 @@ function openHoleOverlay(seat){
   ov.style.display='flex';
   setTimeout(()=>ov.classList.add('show'),10);
   vibrate(HAPTIC.MEDIUM);
+
+  // 홀카드 선택 상태 동기화
+  syncHoleSelection(seat);
+}
+
+function syncHoleSelection(seat){
+  const arr = S.holes[seat] || ['', ''];
+  const cards = document.querySelectorAll('#boardRowOverlay .card');
+  cards.forEach(el => {
+    const text = el.textContent;
+    const matched = [...SUITS].find(s => [...RANKS].find(r => prettyCard(r+s) === text));
+    if(!matched) return;
+
+    const card = [...RANKS].find(r => [...SUITS].find(s => prettyCard(r+s) === text));
+    const fullCard = card ? card + matched : null;
+
+    if(arr.includes(fullCard)){
+      el.classList.add('active');
+    }else{
+      el.classList.remove('active');
+    }
+  });
 }
 function pickCardOverlay(card,el){
   if(!S.holePickSeat) return;
@@ -825,6 +1003,7 @@ function commitHand(){
     btn_seat:S.btnSeat||'',
     board:getBoardObjectForSave(),
     pre_pot:S.prePot||'',
+    bb_amount:S.bbValue||0, // v3.3.3: BB 값 저장
     winner_seat:'',
     pot_final:'',
     actions:S.actions.map(x=>Object.assign({},x)),
@@ -945,7 +1124,8 @@ function getBoardObjectForSave(){
 }
 
 /* === Review 상태 관리 (v1.2.0) === */
-const reviewState={page:1,size:10,total:0,loading:false,hasMore:true,selectedId:null};
+// v3.3.2: Review 리스트 지연 로딩을 위한 플래그 추가
+const reviewState={page:1,size:10,total:0,loading:false,hasMore:true,selectedId:null,loaded:false};
 
 function loadList(reset){
   if(reset){ reviewState.page=1; reviewState.hasMore=true; reviewState.total=0; }
@@ -963,6 +1143,16 @@ function loadList(reset){
     data.items.forEach(it=>box.appendChild(createListItem(it)));
     reviewState.page++;
     reviewState.hasMore=(box.children.length<reviewState.total);
+
+    // v3.3.3: 첫 로딩 시 최신 핸드 자동 선택
+    if(reset && data.items.length > 0){
+      const firstItem = data.items[0];
+      const firstEl = box.querySelector(`[data-hand-id="${firstItem.hand_id}"]`);
+      if(firstEl){
+        console.log('[AUTO] 최신 핸드 자동 선택:', firstItem.hand_id);
+        selectAndLoadDetail(firstItem.hand_id, firstEl);
+      }
+    }
   }).withFailureHandler(err=>{
     reviewState.loading=false;
     box.innerHTML=`<div class="small" style="color:#ffbdbd">로드 오류: ${(err.message||err)}</div>`;
@@ -1194,46 +1384,53 @@ function renderDetailContent(head,acts){
 
     ${renderPotFooter(head,acts)}
 
-    ${renderVirtualSection(head.hand_id, participants)}`;
+    ${renderVirtualSection(head, participants)}`;
 }
 
-function renderVirtualSection(handId, participants){
-  const defaultBB = S.bbValue || 0;
+function renderVirtualSection(head, participants){
+  // v3.3.3: 핸드에 저장된 BB 우선 사용, 없으면 전역 설정값 사용
+  const handBB = (head && head.bb_amount) ? head.bb_amount : 0;
+  const defaultBB = handBB > 0 ? handBB : (S.bbValue || 0);
+  const handId = head ? head.hand_id : '';
 
-  const chunks = [];
-  const chunkSize = 2;
-  for(let i = 0; i < participants.length; i += chunkSize){
-    chunks.push(participants.slice(i, i + chunkSize));
-  }
+  // v3.3.3: 세로 방향 레이아웃 (각 플레이어 별도 줄)
+  const playerRows = participants.map(p => `
+    <div style="display:flex; align-items:center; gap:6px; padding:4px 0; border-bottom:1px solid #1e293b;">
+      <input type="checkbox" class="player-select-chk" value="${p.seat}" checked
+             style="width:16px; height:16px; cursor:pointer; accent-color:#3b82f6; flex-shrink:0;">
+      <span style="font-weight:600; min-width:80px; font-size:0.75rem;">${p.name}</span>
+      <input type="text" inputmode="numeric" class="stack-override-input" data-seat="${p.seat}" value="${formatNumber(p.stack || 0)}" placeholder="스택"
+             style="width:90px; padding:4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.7rem;">
+      <label style="display:flex; align-items:center; gap:3px; margin-left:auto;">
+        <span style="color:#94a3b8; font-size:0.65rem;">탈락</span>
+        <input type="checkbox" class="eliminated-chk" data-seat="${p.seat}"
+               style="width:14px; height:14px; cursor:pointer; accent-color:#ef4444;">
+      </label>
+    </div>
+  `).join('');
 
-  // v3.3.0: 숫자 포맷팅 적용
   return `
     <div style="margin-top:8px; padding:8px; background:#0e1322; border-radius:4px; border:1px solid #1e293b;">
-      <div style="font-size:0.7rem; margin-bottom:6px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-        <label style="display:flex; align-items:center; gap:4px;">
-          <span style="color:#94a3b8;">BB</span>
+      <div style="font-size:0.75rem; font-weight:600; color:#94a3b8; margin-bottom:8px;">📡 VIRTUAL 시트 전송</div>
+
+      <div style="margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #1e293b;">
+        <label style="display:flex; align-items:center; gap:6px;">
+          <span style="color:#94a3b8; font-size:0.75rem; min-width:30px;">BB</span>
           <input type="text" inputmode="numeric" id="bbOverrideInput" value="${formatNumber(defaultBB)}" placeholder="1,000"
-                 style="width:70px; padding:3px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.7rem;">
+                 style="width:100px; padding:4px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.75rem;">
         </label>
-        ${chunks.map((chunk, chunkIdx) => chunk.map(p => `
-          <label style="display:flex; align-items:center; gap:3px; font-size:0.7rem;">
-            <input type="checkbox" class="player-select-chk" value="${p.seat}" checked
-                   style="width:14px; height:14px; cursor:pointer; accent-color:#3b82f6;">
-            <span style="font-weight:600;">${p.name}</span>
-            <input type="text" inputmode="numeric" class="stack-override-input" data-seat="${p.seat}" value="${formatNumber(p.stack || 0)}" placeholder="0"
-                   style="width:70px; padding:3px; background:#0f1320; border:1px solid #2a3249; border-radius:3px; color:#e7eaf0; font-size:0.7rem;">
-            <input type="checkbox" class="eliminated-chk" data-seat="${p.seat}"
-                   style="width:12px; height:12px; cursor:pointer; accent-color:#ef4444;">
-          </label>
-        `).join('')).join('')}
+      </div>
+
+      <div style="margin-bottom:10px;">
+        ${playerRows}
       </div>
 
       <button id="sendToVirtualDetailBtn" class="btnPrimary" onclick="sendCurrentHandToVirtual()"
-              style="width:100%; padding:6px; font-size:0.75rem; font-weight:600;">
-        📤 전송
+              style="width:100%; padding:8px; font-size:0.75rem; font-weight:600;">
+        📤 VIRTUAL 전송
       </button>
 
-      <div id="virtualDetailMsg" style="margin-top:4px; font-size:0.65rem; text-align:center;"></div>
+      <div id="virtualDetailMsg" style="margin-top:6px; font-size:0.7rem; text-align:center;"></div>
     </div>
   `;
 }
@@ -1343,6 +1540,69 @@ function testKeyplayerSort() {
 
   console.log('=== Test Complete ===');
 }
+
+/* ===== v3.3.2: EXTREME MINIMAL 기능 ===== */
+
+// 스택 섹션 접기/펼치기
+function toggleStackSection(){
+  const grid = document.getElementById('stackGrid');
+  const toggle = document.getElementById('stackToggle');
+  if(grid.style.display === 'none'){
+    grid.style.display = 'grid';
+    toggle.textContent = '▲';
+  }else{
+    grid.style.display = 'none';
+    toggle.textContent = '▼';
+  }
+  vibrate(HAPTIC.LIGHT);
+}
+
+// 스택 요약 업데이트
+function updateStackSummary(){
+  const entered = Object.keys(S.stacks).filter(seat => S.stacks[seat] > 0).length;
+  const total = S.seats.filter(s => S.activeSeatMap[s.seat]).length;
+  document.getElementById('stackSummary').textContent = `${entered}/${total}명`;
+}
+
+// 보드 오버레이 열기
+function openBoardOverlay(){
+  // v3.3.2: 보드 핸들러로 재빌드 (홀카드와 분리)
+  console.log('[FIX] 보드 UI - toggleBoardCard 핸들러 연결');
+  buildBoardUI('boardRowOverlay', toggleBoardCard);
+
+  document.getElementById('ovTitle').textContent = '보드 카드 선택';
+  document.getElementById('ovCount').textContent = ` · ${S.board.length}/5장`;
+
+  const ov = document.getElementById('overlay');
+  ov.style.display = 'flex';
+  setTimeout(() => ov.classList.add('show'), 10);
+  vibrate(HAPTIC.MEDIUM);
+
+  syncBoardSelection('boardRowOverlay');
+}
+
+// 보드 디스플레이 업데이트
+function updateBoardDisplay(){
+  const display = document.getElementById('boardDisplay');
+  if(!S.board || S.board.length === 0){
+    display.innerHTML = '<span class="muted small">선택된 카드 없음</span>';
+    return;
+  }
+
+  const badges = S.board.map(card => {
+    const cc = cardCode(card);
+    if(!cc) return '';
+    const suit = cc.slice(-1), r = cc.slice(0, -1);
+    const sym = suit === 's' ? '♠' : suit === 'h' ? '♥' : suit === 'd' ? '♦' : '♣';
+    const cl = suit === 's' ? 'cb-s' : suit === 'h' ? 'cb-h' : suit === 'd' ? 'cb-d' : 'cb-c';
+    return `<span class="cardBadge ${cl}" style="font-size:0.8rem">${r}${sym}</span>`;
+  }).join('');
+
+  display.innerHTML = `<div style="display:flex;gap:4px;flex-wrap:wrap">${badges}</div>`;
+}
+
+// Pills 렌더링 수정 (번호만)
+const originalRenderSeatToggles = window.renderSeatToggles || function(){};
 </script>
 </body>
 </html>
