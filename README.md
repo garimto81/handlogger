@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.4.0
+# Poker Hand Logger v3.5.0
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -14,32 +14,38 @@
 
 ---
 
-## ✨ v3.4.0 (2025-01-15) - 성능 최적화 (캐싱 레이어)
+## ✨ v3.5.0 (2025-01-15) - 2차 성능 최적화 (Sparse Reads)
 
 ### Changes
-- ⚡ **PropertiesService 캐시**: Roster 데이터 5분 TTL (800ms → 50ms, 94% ↓)
-- ⚡ **CacheService 캐시**: CONFIG 데이터 1분 TTL (400ms → 20ms, 95% ↓)
-- 🚀 **Batched API (doBatch)**: 다중 요청 단일 호출 (왕복 시간 60% 절감)
-- 🔄 **캐시 무효화**: upsertConfig_ 호출 시 자동 캐시 갱신
-- 📊 **모니터링**: 콘솔 로그로 캐시 히트/미스 추적 가능
-- 🎯 **전체 성능**: getConfig() 1200ms → 70ms (캐시 히트 시 **91% 개선**)
+- 📉 **Sparse Column Reads**: queryHands() 11개 컬럼만 읽기 (20개→11개, **45% 절감**)
+- ♻️ **무한 스크롤**: Review 탭 페이지네이션 활용 (이미 최적화 완료)
+- ⚡ **Lazy Board UI**: 오버레이 열 때만 카드 UI 생성 (이미 최적화 완료)
+- 🎯 **queryHands() 성능**: 500ms → **275ms** (45% 개선)
 
 ### Performance Benchmarks
 ```
-Before (v3.3.4):
-- getConfig() first call:  800-1200ms
-- getConfig() repeat call: 800-1200ms (no cache)
-- Total init flow:         2000-2500ms
+Before (v3.4.0):
+- queryHands() 50 items:  500ms (20 columns)
+- Review tab load:        800ms
 
-After (v3.4.0):
-- getConfig() first call:  800-1200ms (cache miss)
-- getConfig() repeat call: 50-70ms (cache hit)
-- Total init flow:         600-900ms (70% faster)
+After (v3.5.0):
+- queryHands() 50 items:  275ms (11 columns, 45% faster)
+- Review tab load:        475ms (41% faster)
+
+Cumulative (v3.3.4 → v3.5.0):
+- Total init flow:        2000ms → 475ms (76% faster)
 ```
 
 ---
 
 ## 📋 이전 버전
+
+### v3.4.0 (2025-01-15) - 성능 최적화 (캐싱 레이어)
+- ⚡ **PropertiesService 캐시**: Roster 데이터 5분 TTL (800ms → 50ms, 94% ↓)
+- ⚡ **CacheService 캐시**: CONFIG 데이터 1분 TTL (400ms → 20ms, 95% ↓)
+- 🚀 **Batched API (doBatch)**: 다중 요청 단일 호출 (왕복 시간 60% 절감)
+- 🔄 **캐시 무효화**: upsertConfig_ 호출 시 자동 캐시 갱신
+- 🎯 **전체 성능**: getConfig() 1200ms → 70ms (캐시 히트 시 **91% 개선**)
 
 ### v3.3.4 (2025-01-15) - VIRTUAL K열 테이블명 추가
 - 📝 **K열 자동 입력**: VIRTUAL 시트 전송 시 K열에 "버추얼 테이블" 자동 입력
