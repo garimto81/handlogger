@@ -8,9 +8,18 @@
 
 // VERSION.json 내용을 여기 복사 (syncVersionFromJson 실행 시 ScriptProperties에 저장됨)
 const VERSION_JSON = {
-  "current": "3.5.0",
+  "current": "3.5.1",
   "date": "2025-01-15",
   "changelog": {
+    "3.5.1": {
+      "date": "2025-01-15",
+      "type": "patch",
+      "changes": [
+        "docs: PRD 문서 v3.5.0 업데이트 (성능 최적화 반영)",
+        "docs: PRD_SUMMARY.md 업데이트 (v3.4.0+v3.5.0 성과)",
+        "문서화 완료"
+      ]
+    },
     "3.5.0": {
       "date": "2025-01-15",
       "type": "minor",
