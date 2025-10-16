@@ -762,8 +762,6 @@ function renderAll(){
   requestAnimationFrame(()=>{
     renderSeatToggles(); renderStackGrid(); renderActionPad(); renderTurnSeat(); renderPot(); renderFeed();
     document.getElementById('curStreetTag').textContent=S.curStreet;
-    // v3.3.2: 요약 업데이트
-    updateHandSummary();
     updateBoardDisplay();
   });
 }
