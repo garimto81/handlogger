@@ -739,16 +739,56 @@ function queryHands(filter,paging){
   }
 }
 
+/**
+ * 핸드 상세 캐시 (PropertiesService, 5분 TTL)
+ */
+function getCachedHandDetail_(hand_id){
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'hand_' + hand_id;
+  const cached = cache.get(cacheKey);
+
+  if(cached){
+    console.log('[CACHE HIT] HandDetail (' + hand_id + ')');
+    return JSON.parse(cached);
+  }
+
+  console.log('[CACHE MISS] HandDetail (' + hand_id + ') - reading from Sheets');
+  const detail = getHandDetail(hand_id);
+
+  // 캐시 저장 (TTL: 5분)
+  if(detail && detail.head){
+    cache.put(cacheKey, JSON.stringify(detail), 300);
+    console.log('[CACHE SET] HandDetail (' + hand_id + ') cached (5min)');
+  }
+
+  return detail;
+}
+
 function getHandDetail(hand_id){
   let result = { head:null, acts:[], error:'' };
   try{
     ensureSheets_(); if (!hand_id) return {head:null, acts:[], error:'invalid hand_id'};
     const ss = appSS_(); const shH = ss.getSheetByName(SH.HANDS); const shA = ss.getSheetByName(SH.ACTS);
-    const H = readAll_(shH); const A = readAll_(shA);
-    const idxH = H.map['hand_id']; let head = null;
-    for (let i=0; i<H.rows.length; i++){
-      if (String(H.rows[i][idxH]) === String(hand_id)){
-        const r = H.rows[i], m = H.map;
+
+    // 최적화: 최근 100개 핸드만 스캔 (VIRTUAL 전송은 보통 최신 핸드)
+    const lastRow = shH.getLastRow();
+    const RECENT_LIMIT = 100;
+    const startRow = Math.max(2, lastRow - RECENT_LIMIT + 1);
+    const scanRows = lastRow - startRow + 1;
+
+    const header = shH.getRange(1, 1, 1, shH.getLastColumn()).getValues()[0];
+    const data = shH.getRange(startRow, 1, scanRows, shH.getLastColumn()).getValues();
+
+    const map = {};
+    header.forEach((h, i) => map[String(h).trim()] = i);
+
+    const idxH = map['hand_id'];
+    let head = null;
+
+    // 역순 스캔 (최신 → 과거)
+    for (let i = data.length - 1; i >= 0; i--){
+      if (String(data[i][idxH]) === String(hand_id)){
+        const r = data[i], m = map;
         head = {
           hand_id: String(r[m['hand_id']]),
           table_id: String(r[m['table_id']] || ''),
@@ -773,20 +813,69 @@ function getHandDetail(hand_id){
         break;
       }
     }
+    if (!head){
+      // 최근 100개에 없으면 전체 스캔 (fallback)
+      console.log('[FALLBACK] HandDetail not in recent 100, scanning all rows');
+      const H = readAll_(shH);
+      const idxHAll = H.map['hand_id'];
+      for (let i=0; i<H.rows.length; i++){
+        if (String(H.rows[i][idxHAll]) === String(hand_id)){
+          const r = H.rows[i], m = H.map;
+          head = {
+            hand_id: String(r[m['hand_id']]),
+            table_id: String(r[m['table_id']] || ''),
+            btn_seat: String(r[m['btn_seat']] || ''),
+            hand_no: String(r[m['hand_no']] || ''),
+            start_street: String(r[m['start_street']] || ''),
+            started_at: String(r[m['started_at']] || ''),
+            ended_at: String(r[m['ended_at']] || ''),
+            board: {
+              f1: r[m['board_f1']] || '',
+              f2: r[m['board_f2']] || '',
+              f3: r[m['board_f3']] || '',
+              turn: r[m['board_turn']] || '',
+              river: r[m['board_river']] || ''
+            },
+            pre_pot: Number(r[m['pre_pot']] || 0),
+            winner_seat: '',
+            pot_final: String(r[m['pot_final']] || ''),
+            stacks_json: String(r[m['stacks_json']]||'{}'),
+            holes_json: String(r[m['holes_json']]||'{}')
+          };
+          break;
+        }
+      }
+    }
+
     if (!head) return { head:null, acts:[], error:'hand not found' };
 
-    const acts = A.rows
-      .filter(r => String(r[A.map['hand_id']]) === String(hand_id))
+    // ACTIONS 최적화: 최근 500개만 스캔
+    const shA = ss.getSheetByName(SH.ACTS);
+    const lastActRow = shA.getLastRow();
+    const ACT_LIMIT = 500;
+    const actStartRow = Math.max(2, lastActRow - ACT_LIMIT + 1);
+    const actScanRows = lastActRow - actStartRow + 1;
+
+    const actHeader = shA.getRange(1, 1, 1, shA.getLastColumn()).getValues()[0];
+    const actData = actStartRow <= lastActRow
+      ? shA.getRange(actStartRow, 1, actScanRows, shA.getLastColumn()).getValues()
+      : [];
+
+    const actMap = {};
+    actHeader.forEach((h, i) => actMap[String(h).trim()] = i);
+
+    const acts = actData
+      .filter(r => String(r[actMap['hand_id']]) === String(hand_id))
       .map(r => ({
-        seq: Number(r[A.map['seq']] || 0),
-        street: String(r[A.map['street']] || ''),
-        seat: String(r[A.map['seat']] || ''),
-        action: String(r[A.map['action']] || ''),
-        amount_input: Number(r[A.map['amount_input']] || 0),
-        to_call_after: Number(r[A.map['to_call_after']] || 0),
-        contrib_after_seat: Number(r[A.map['contrib_after_seat']] || 0),
-        pot_after: Number(r[A.map['pot_after']] || 0),
-        note: String(r[A.map['note']] || '')
+        seq: Number(r[actMap['seq']] || 0),
+        street: String(r[actMap['street']] || ''),
+        seat: String(r[actMap['seat']] || ''),
+        action: String(r[actMap['action']] || ''),
+        amount_input: Number(r[actMap['amount_input']] || 0),
+        to_call_after: Number(r[actMap['to_call_after']] || 0),
+        contrib_after_seat: Number(r[actMap['contrib_after_seat']] || 0),
+        pot_after: Number(r[actMap['pot_after']] || 0),
+        note: String(r[actMap['note']] || '')
       }))
       .sort((x,y)=>x.seq - y.seq);
 
@@ -893,9 +982,9 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       steps: {}
     };
 
-    // 1. 핸드 상세 조회
+    // 1. 핸드 상세 조회 (캐시 사용)
     const t1 = Date.now();
-    const detail = getHandDetail(hand_id);
+    const detail = getCachedHandDetail_(hand_id);
     if(!detail || !detail.head) throw new Error(`Hand not found: ${hand_id}`);
     perfTimer.steps.getHandDetail = Date.now() - t1;
 
@@ -919,35 +1008,42 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       return {success:false, reason:'no-rows'};
     }
 
-    // 3. C열 Time 매칭 (started_at 시간과 정확히 일치하는 행 찾기)
+    // 3. C열 Time 매칭 - 역순 스캔 최적화 (최근 50행만 검색)
     const t3 = Date.now();
-    const rngVals = sh.getRange(2,3,last-1,1).getValues();
-    const rngDisp = sh.getRange(2,3,last-1,1).getDisplayValues();
-    const rngE = sh.getRange(2,5,last-1,1).getValues(); // E열 상태 확인
+    const SCAN_WINDOW = 50; // 최근 50행만 스캔 (최신 핸드는 상단에 있을 확률 높음)
+    const scanRows = Math.min(SCAN_WINDOW, last - 1);
+    const startRow = Math.max(2, last - scanRows + 1);
+
+    const rngVals = sh.getRange(startRow, 3, scanRows, 1).getValues();
+    const rngDisp = sh.getRange(startRow, 3, scanRows, 1).getDisplayValues();
+    const rngE = sh.getRange(startRow, 5, scanRows, 1).getValues(); // E열 상태 확인
     perfTimer.steps.readColumns = Date.now() - t3;
-    Logger.log('🔍 [VIRTUAL] C열 Time 검색 중... (목표: ' + hhmmTime + ') - 스캔 행 수: ' + (last-1));
+    Logger.log('🔍 [VIRTUAL] C열 Time 검색 중... (목표: ' + hhmmTime + ') - 스캔 범위: Row ' + startRow + '~' + last + ' (' + scanRows + '행)');
 
     let pickRow = -1;
     let debugInfo = [];
     const t4 = Date.now();
-    for(let i=0; i<rngVals.length; i++){
+
+    // 역순 스캔 (최신 → 과거)
+    for(let i = rngVals.length - 1; i >= 0; i--){
       const raw = rngVals[i][0];
       const disp = rngDisp[i][0];
       const eVal = rngE[i][0]; // E열 값
       const cellTime = parseTimeCellToTodayKST_(raw, disp);
       const cellHHMM = cellTime ? extractTimeHHMM_(cellTime.toISOString()) : '';
 
-      debugInfo.push(`Row ${i+2}: ${cellHHMM} (E=${eVal})`);
+      const actualRow = startRow + i;
+      debugInfo.push(`Row ${actualRow}: ${cellHHMM} (E=${eVal})`);
 
       if(cellHHMM === hhmmTime){
         // E열이 이미 '미완료'면 스킵 (이미 처리된 행)
         if(eVal === '미완료'){
-          log_('PUSH_VIRTUAL_SKIP', `row=${i+2} already processed`, '');
-          console.log('⏭️ [VIRTUAL] 스킵: Row ' + (i+2) + ' (이미 처리됨)');
+          log_('PUSH_VIRTUAL_SKIP', `row=${actualRow} already processed`, '');
+          console.log('⏭️ [VIRTUAL] 스킵: Row ' + actualRow + ' (이미 처리됨)');
           continue;
         }
-        pickRow = i + 2;
-        console.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (Time: ' + cellHHMM + ')');
+        pickRow = actualRow;
+        console.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (Time: ' + cellHHMM + ') - 역순 스캔으로 발견');
         break;
       }
     }
@@ -962,8 +1058,7 @@ function sendHandToVirtual(hand_id, sheetId, payload){
 
     log_('PUSH_VIRTUAL_ROW', `row=${pickRow} time=${hhmmTime}`, '');
 
-    // 4. 값 구성
-    console.log('🔧 [VIRTUAL] 값 생성 시작...');
+    // 4. 값 구성 (최적화: 로깅 최소화)
     const t5 = Date.now();
     const E = '미완료';
     const F = buildFileName_(detail);
@@ -972,44 +1067,18 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     const J = buildSubtitle_(detail, payload);
     perfTimer.steps.buildValues = Date.now() - t5;
 
-    console.log('📝 [VIRTUAL] 생성된 값:', {
-      E: E,
-      F: F.slice(0, 50) + (F.length > 50 ? '...' : ''),
-      G: G,
-      H: H.slice(0, 100) + (H.length > 100 ? '...' : ''),
-      'J (길이)': J.length,
-      'J (내용)': J || '(빈 문자열)'
-    });
+    console.log('📝 [VIRTUAL] 값 생성 완료: F=' + F.slice(0, 30) + '... J=' + (J ? J.slice(0, 30) + '...' : '(빈값)'));
 
-    // J열 상세 디버깅
+    // J열 상세 디버깅 (빈 값인 경우만)
     if(!J || J.length === 0){
       console.log('⚠️ [VIRTUAL] J열 경고: 빈 문자열 생성됨');
-      console.log('🔍 [VIRTUAL] J열 생성 과정 추적 시작...');
-
-      // buildSubtitle_ 함수 내부 로직 재실행 (디버깅용)
       const tableId = head.table_id;
-      const rosterData = readRoster_();
-      console.log('📊 [VIRTUAL] Roster 데이터:', {
-        'tables 수': rosterData.tables ? rosterData.tables.length : 0,
-        'roster 테이블 수': rosterData.roster ? Object.keys(rosterData.roster).length : 0,
-        'tableId': tableId,
-        'roster[tableId] 존재': !!(rosterData.roster && rosterData.roster[tableId])
-      });
+      const rosterData = getCachedRoster_();
+      console.log('🔍 [VIRTUAL] 디버깅: tableId=' + tableId + ' roster 존재=' + !!(rosterData.roster && rosterData.roster[tableId]));
 
       if(rosterData.roster && rosterData.roster[tableId]){
         const rosterList = rosterData.roster[tableId];
-        console.log('👥 [VIRTUAL] Table ' + tableId + ' Roster:', {
-          '총 플레이어 수': rosterList.length,
-          '플레이어 목록': rosterList.map(p => ({
-            seat: p.seat,
-            name: p.player,
-            keyplayer: p.keyplayer
-          }))
-        });
-
         const participants = participantsOrdered_(detail);
-        console.log('🎮 [VIRTUAL] 핸드 참가자:', participants);
-
         const keyPlayers = rosterList.filter(p => p.keyplayer && participants.includes(String(p.seat)));
         console.log('⭐ [VIRTUAL] 키플레이어 필터링 결과:', {
           '키플레이어 수': keyPlayers.length,
@@ -1351,7 +1420,7 @@ function buildSubtitle_(detail, payload){
   // 🔧 v3.0.0: eliminatedSeats 배열 처리 (복수 플레이어 개별 탈락 표시)
   const eliminatedSet = new Set((eliminatedSeats || []).map(String));
 
-  // 각 선택된 플레이어별 자막 생성
+  // 각 선택된 플레이어별 자막 생성 (최적화: 로깅 제거)
   const lines = selectedPlayers.map(p => {
     const seatStr = String(p.seat);
     const name = p.player || `S${seatStr}`;
@@ -1360,7 +1429,6 @@ function buildSubtitle_(detail, payload){
 
     // 해당 seat이 eliminatedSeats에 포함되면 ELIMINATED 표시
     if(eliminatedSet.has(seatStr)){
-      Logger.log(`🔴 [SUBTITLE] ${name} (seat ${seatStr}) - ELIMINATED`);
       return `${line1}\nELIMINATED`;
     }
 
@@ -1375,7 +1443,6 @@ function buildSubtitle_(detail, payload){
       ? `${numComma_(finalStack)} (${stackBB})`
       : numComma_(finalStack);
 
-    Logger.log(`✅ [SUBTITLE] ${name} (seat ${seatStr}) - STACK: ${stackText}`);
     return `${line1}\nCURRENT STACK - ${stackText}`;
   });
 
