@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.6.3
+# Poker Hand Logger v3.7.1
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,32 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🔒 v3.7.1 (2025-01-16) - Security & Stability Patch
+
+### Critical Fixes (P0)
+- 🐛 **무한 루프 버그 수정**: handId 충돌 처리 시 무한 루프 가능성 제거 (최대 100회 재시도 제한)
+- 🔐 **APP_SPREADSHEET_ID 보안 강화**: 하드코딩된 Spreadsheet ID를 PropertiesService로 이전 (자동 마이그레이션 지원)
+- 🛡️ **에러 메시지 정보 노출 방지**: throw Error에서 민감 정보(hand_id, debugInfo) 제거
+
+### Technical Details
+```javascript
+// Before: 무한 루프 위험
+while(exists.has(handId)) handId+='+1';
+
+// After: 제한된 재시도
+let suffix = 0;
+while(exists.has(handId + (suffix ? `_${suffix}` : ''))){
+  suffix++;
+  if(suffix > 100) throw new Error('handId collision limit exceeded');
+}
+```
+
+### 출처
+- 코드 리뷰 82/100 점수 - Critical 이슈 3건 대응
+- [code.gs:580-588](code.gs#L580-L588), [164-179](code.gs#L164-L179), [1011-1014](code.gs#L1011-L1014)
 
 ---
 
