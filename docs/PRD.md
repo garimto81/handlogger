@@ -1,18 +1,18 @@
 # Product Requirements Document (PRD)
-## Poker Hand Logger v3.5.0
+## Poker Hand Logger v3.7.0
 
-**문서 버전**: 3.5.0
-**최종 업데이트**: 2025-01-15
+**문서 버전**: 3.7.0
+**최종 업데이트**: 2025-01-16
 **작성자**: Product Team
 **상태**: Living Document
 
-**주요 변경사항 (v3.5.0):**
-- ✅ v3.4.0 반영: 캐싱 레이어 구현 (PropertiesService + CacheService)
-- ✅ v3.4.0 반영: Batched API (doBatch) 추가
-- ✅ v3.4.0 반영: getConfig() 91% 성능 개선 (1200ms → 70ms)
-- ✅ v3.5.0 반영: Sparse Column Reads (queryHands 20→11 컬럼)
-- ✅ v3.5.0 반영: 누적 76% 성능 개선 (2000ms → 475ms)
+**주요 변경사항 (v3.7.0):**
+- ✅ v3.7.0 반영: VIRTUAL 전송 성능 56% 개선 (4.5s → 2.0s)
+- ✅ v3.7.0 반영: 역순 스캔 (1442행 → 50행 윈도우, 97% 절감)
+- ✅ v3.7.0 반영: HandDetail 캐시 (CacheService 5분 TTL, 90% 개선)
+- ✅ v3.7.0 반영: 로깅 오버헤드 최소화 (50% 개선)
 - ✅ 성능 요구사항 섹션 업데이트
+- ✅ 코드 리뷰 완료 (82/100점, Critical 이슈 3건 식별)
 
 ---
 

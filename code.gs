@@ -161,7 +161,23 @@ function initializeCache() {
   Logger.log('🎉 캐시 초기화 완료! 이제 빠른 속도로 작동합니다.');
 }
 
-const APP_SPREADSHEET_ID = '19e7eDjoZRFZooghZJF3XmOZzZcgmqsp9mFAfjvJWhj4'; // HANDS/ACTIONS/CONFIG/LOG/ROSTER 통합 저장소
+// 보안: Spreadsheet ID는 PropertiesService에서 관리
+// 초기 설정: PropertiesService.getScriptProperties().setProperty('APP_SPREADSHEET_ID', 'YOUR_ID_HERE');
+function getAppSpreadsheetId_(){
+  const props = PropertiesService.getScriptProperties();
+  let id = props.getProperty('APP_SPREADSHEET_ID');
+
+  // 마이그레이션 지원: 기존 하드코딩된 ID를 PropertiesService로 자동 이전
+  if(!id){
+    id = '19e7eDjoZRFZooghZJF3XmOZzZcgmqsp9mFAfjvJWhj4';
+    props.setProperty('APP_SPREADSHEET_ID', id);
+    Logger.log('⚠️ APP_SPREADSHEET_ID가 PropertiesService로 자동 마이그레이션되었습니다.');
+  }
+
+  if(!id) throw new Error('APP_SPREADSHEET_ID가 설정되지 않았습니다. PropertiesService에서 설정하세요.');
+  return id;
+}
+
 const ROSTER_SHEET_NAME = 'Type'; // 플레이어 명부 시트 (APP_SPREADSHEET 내부, 영구 고정)
 const SH = { HANDS:'HANDS', ACTS:'ACTIONS', CONFIG:'CONFIG', LOG:'LOG' };
 
@@ -198,7 +214,7 @@ function withScriptLock_(fn){
   }
 }
 
-function appSS_(){ return SpreadsheetApp.openById(APP_SPREADSHEET_ID); }
+function appSS_(){ return SpreadsheetApp.openById(getAppSpreadsheetId_()); }
 function getOrCreateSheet_(ss,n){ return ss.getSheetByName(n)||ss.insertSheet(n); }
 function setHeaderIfEmpty_(sh,hdr){
   const f=sh.getRange(1,1,1,hdr.length).getValues()[0];
@@ -577,7 +593,15 @@ function _saveCore_(payload){
 
   // hand_id
   let handId=Utilities.formatDate(new Date(),Session.getScriptTimeZone(),"yyyyMMdd'_'HHmmssSSS");
-  const exists=new Set(H.rows.map(r=>String(r[H.map['hand_id']]))); while(exists.has(handId)) handId+='+1';
+  const exists=new Set(H.rows.map(r=>String(r[H.map['hand_id']])));
+
+  // Collision handling with bounded retry (prevent infinite loop)
+  let suffix = 0;
+  while(exists.has(handId + (suffix ? `_${suffix}` : ''))){
+    suffix++;
+    if(suffix > 100) throw new Error('handId collision limit exceeded - system overloaded');
+  }
+  handId += suffix ? `_${suffix}` : '';
 
   // hand_no 자동
   let handNo = payload.hand_no; if(!handNo){ handNo = String(nextHandSeq_(String(payload.table_id||''))); }
@@ -984,7 +1008,10 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     // 1. 핸드 상세 조회 (캐시 사용)
     const t1 = Date.now();
     const detail = getCachedHandDetail_(hand_id);
-    if(!detail || !detail.head) throw new Error(`Hand not found: ${hand_id}`);
+    if(!detail || !detail.head){
+      console.log(`❌ [VIRTUAL] Hand not found: ${hand_id}`);
+      throw new Error('Hand not found');
+    }
     perfTimer.steps.getHandDetail = Date.now() - t1;
 
     const head = detail.head;
@@ -1049,10 +1076,10 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     perfTimer.steps.scanRows = Date.now() - t4;
 
     if(pickRow < 0){
-      log_('PUSH_VIRTUAL_FAIL', `no-match: ${hhmmTime}. Checked: ${debugInfo.join(', ')}`, '');
+      log_('PUSH_VIRTUAL_FAIL', `no-match: ${hhmmTime}`, '');
       console.log('❌ [VIRTUAL] 실패: Time 매칭 없음 (목표: ' + hhmmTime + ')');
-      console.log('🔍 [VIRTUAL] 검색된 행들:', debugInfo.slice(0, 10).join(', '));
-      return {success:false, reason:`no-match: ${hhmmTime}`};
+      console.log('🔍 [VIRTUAL] 검색된 행 개수:', debugInfo.length);
+      return {success:false, reason:'no-match'};
     }
 
     log_('PUSH_VIRTUAL_ROW', `row=${pickRow} time=${hhmmTime}`, '');
