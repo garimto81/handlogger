@@ -850,7 +850,6 @@ function getHandDetail(hand_id){
     if (!head) return { head:null, acts:[], error:'hand not found' };
 
     // ACTIONS 최적화: 최근 500개만 스캔
-    const shA = ss.getSheetByName(SH.ACTS);
     const lastActRow = shA.getLastRow();
     const ACT_LIMIT = 500;
     const actStartRow = Math.max(2, lastActRow - ACT_LIMIT + 1);
