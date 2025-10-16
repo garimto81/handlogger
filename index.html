@@ -139,15 +139,15 @@ select#tableSel:has(option.keyplayer-option:checked) {
   </div>
 </header>
 
-<!-- v3.3.2: 로딩 프로그레스 -->
-<div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(11,13,18,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100">
-  <div style="text-align:center">
-    <div style="font-size:1.2rem;font-weight:700;margin-bottom:20px">Poker Hand Logger</div>
-    <div style="width:280px;height:6px;background:#1f2435;border-radius:3px;overflow:hidden;margin-bottom:12px">
+<!-- v3.6.0: 스마트 적응형 로딩 오버레이 (Adaptive Loading) -->
+<div id="loadingOverlay" style="position:fixed;inset:0;background:rgba(11,13,18,0.95);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;opacity:0;transition:opacity 0.25s ease">
+  <div id="loadingCard" style="text-align:center;background:#101522;border:1px solid #2a3249;border-radius:20px;padding:24px 32px;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6);transition:all 0.25s ease">
+    <div id="loadingTitle" style="font-size:1.2rem;font-weight:700;margin-bottom:20px;color:#a9b8ff">Poker Hand Logger</div>
+    <div style="width:100%;height:6px;background:#1f2435;border-radius:3px;overflow:hidden;margin-bottom:12px">
       <div id="loadingBar" style="width:0%;height:100%;background:var(--acc);transition:width 0.3s ease"></div>
     </div>
-    <div id="loadingText" style="font-size:0.75rem;color:var(--muted)">초기화 중...</div>
-    <div id="loadingPercent" style="font-size:0.7rem;color:#64748b;margin-top:4px">0%</div>
+    <div id="loadingText" style="font-size:0.75rem;color:var(--muted);margin-bottom:4px">초기화 중...</div>
+    <div id="loadingDetail" style="font-size:0.65rem;color:#64748b;min-height:16px">0%</div>
   </div>
 </div>
 
@@ -287,7 +287,8 @@ const PERF={};
 function perfStart(label){PERF[label]=performance.now();}
 function perfEnd(label){if(PERF[label])console.log(`[PERF] ${label}: ${(performance.now()-PERF[label]).toFixed(1)}ms`);}
 
-/* v3.3.2: 로딩 프로그레스 (세부 로깅 강화) */
+/* ===== v3.6.0: 스마트 적응형 로딩 시스템 (Smart Adaptive Loading) ===== */
+
 const LOADING = {
   total: 6,
   current: 0,
@@ -298,37 +299,108 @@ const LOADING = {
     '이벤트 리스너 등록 중...',
     '화면 렌더링 중...',
     '완료!'
-  ]
+  ],
+  // v3.6.0: 적응형 로딩 상태
+  startTime: 0,
+  timer: null,
+  mode: 'full', // 'full' | 'compact'
+  haptic: false  // 햅틱 피드백 여부
 };
 
-function updateLoading(step, percent, detail){
-  const bar = document.getElementById('loadingBar');
-  const text = document.getElementById('loadingText');
-  const percentText = document.getElementById('loadingPercent');
+/**
+ * 스마트 로딩 표시 (300ms 미만 작업은 자동 숨김)
+ * @param {string} message - 메시지
+ * @param {object} options - { mode: 'full'|'compact', percent: 0-100, detail: '', haptic: false }
+ */
+function showLoading(message, options = {}){
+  const { mode = 'full', percent = 0, detail = '', haptic = false } = options;
 
-  // 메인 메시지
-  const mainMsg = LOADING.steps[step] || '로딩 중...';
+  LOADING.startTime = Date.now();
+  LOADING.mode = mode;
+  LOADING.haptic = haptic;
 
-  // 세부 메시지 (선택적)
-  const displayMsg = detail ? `${mainMsg} - ${detail}` : mainMsg;
+  // 300ms 지연 후 표시 (깜빡임 방지)
+  LOADING.timer = setTimeout(() => {
+    const overlay = document.getElementById('loadingOverlay');
+    const card = document.getElementById('loadingCard');
+    const title = document.getElementById('loadingTitle');
+    const bar = document.getElementById('loadingBar');
+    const text = document.getElementById('loadingText');
+    const detailEl = document.getElementById('loadingDetail');
 
-  if(bar) bar.style.width = percent + '%';
-  if(text) text.textContent = displayMsg;
-  if(percentText) percentText.textContent = Math.round(percent) + '%';
+    if(!overlay) return;
 
-  // 콘솔 로깅 강화
-  const timestamp = new Date().toISOString().slice(11, 23); // HH:mm:ss.SSS
-  console.log(`[${timestamp}] [LOAD] ${Math.round(percent)}% - ${displayMsg}`);
+    // 모드 적용
+    if(mode === 'compact'){
+      overlay.style.background = 'rgba(11,13,18,0.75)'; // 더 투명
+      card.style.minWidth = '240px';
+      card.style.padding = '20px 24px';
+      title.style.display = 'none'; // 타이틀 숨김
+    } else {
+      overlay.style.background = 'rgba(11,13,18,0.95)';
+      card.style.minWidth = '280px';
+      card.style.padding = '24px 32px';
+      title.style.display = 'block';
+    }
+
+    // 내용 업데이트
+    if(bar) bar.style.width = percent + '%';
+    if(text) text.textContent = message;
+    if(detailEl) detailEl.textContent = detail || Math.round(percent) + '%';
+
+    // 표시
+    overlay.style.display = 'flex';
+    setTimeout(() => overlay.style.opacity = '1', 10);
+
+    console.log(`[LOAD] ${mode.toUpperCase()} - ${Math.round(percent)}% - ${message}${detail ? ' - ' + detail : ''}`);
+  }, 300);
 }
 
-function hideLoading(){
-  const overlay = document.getElementById('loadingOverlay');
-  if(overlay){
-    overlay.style.opacity = '0';
-    overlay.style.transition = 'opacity 0.3s';
-    setTimeout(() => overlay.style.display = 'none', 300);
+/**
+ * 로딩 숨김 (햅틱 자동 처리)
+ * @param {boolean} success - 성공 여부 (햅틱 트리거)
+ */
+function hideLoading(success = true){
+  // 타이머 취소 (300ms 전 완료 시)
+  if(LOADING.timer){
+    clearTimeout(LOADING.timer);
+    LOADING.timer = null;
   }
-  console.log('[LOAD] 100% - 로딩 완료');
+
+  const elapsed = Date.now() - LOADING.startTime;
+  const overlay = document.getElementById('loadingOverlay');
+
+  if(!overlay || overlay.style.display === 'none'){
+    console.log(`[LOAD] 완료 (${elapsed}ms) - 표시 안 됨 (빠른 작업)`);
+    return;
+  }
+
+  // 햅틱 피드백 (중요 작업만)
+  if(success && LOADING.haptic){
+    vibrate(HAPTIC.STRONG);
+  }
+
+  // 페이드아웃
+  overlay.style.opacity = '0';
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    console.log(`[LOAD] 완료 (${elapsed}ms)`);
+  }, 250);
+}
+
+/**
+ * 레거시 호환 함수 (기존 updateLoading 유지)
+ */
+function updateLoading(step, percent, detail){
+  const mainMsg = LOADING.steps[step] || '로딩 중...';
+  const displayMsg = detail ? `${mainMsg} - ${detail}` : mainMsg;
+
+  showLoading(mainMsg, {
+    mode: 'full',
+    percent: percent,
+    detail: detail || Math.round(percent) + '%',
+    haptic: false
+  });
 }
 
 /* ===== v2.9.0: Keyplayer 테이블 우선 정렬 ===== */
@@ -1011,17 +1083,18 @@ function commitHand(){
     stack_snapshot:S.stacks
   };
   const msg=document.getElementById('commitMsg');
-  // v2.6.0: 낙관적 UI 업데이트 (즉시 피드백)
-  msg.textContent='저장 중…';
   const btn=document.getElementById('commitBtn'); btn.disabled=true;
+
+  // v3.6.0: 스마트 로딩 (compact 모드 + 햅틱)
+  showLoading('핸드 데이터 저장 중...', { mode: 'compact', percent: 50, haptic: true });
 
   // v2.3.0: Record는 HANDS/ACTIONS만 저장 (VIRTUAL 자동 전송 제거)
   google.script.run
     .withSuccessHandler(res=>{
       perfEnd('commit');
+      hideLoading(true); // 햅틱 자동 트리거
       msg.textContent=`완료: #${res.hand_no||'-'} (${res.hand_id})`;
       btn.disabled=false;
-      vibrate(HAPTIC.STRONG);
 
       // v3.3.0: 커밋 후 다음 핸드 번호 증가
       S.nextHandNo++;
@@ -1031,6 +1104,7 @@ function commitHand(){
     })
     .withFailureHandler(err=>{
       perfEnd('commit');
+      hideLoading(false); // 실패 시 햅틱 없음
       msg.textContent='오류: '+(err.message||err);
       btn.disabled=false;
       vibrate(HAPTIC.STRONG);
@@ -1082,18 +1156,22 @@ function sendCurrentHandToVirtual(){
   const msg = document.getElementById('virtualDetailMsg');
 
   btn.disabled = true;
-  btn.textContent = '전송 중...';
   msg.textContent = '';
+
+  // v3.6.0: 스마트 로딩 (compact 모드, 햅틱 없음)
+  showLoading('VIRTUAL 시트 전송 중...', { mode: 'compact', percent: 50, haptic: false });
 
   google.script.run
     .withSuccessHandler(res=>{
       console.log('VIRTUAL 전송 응답 (상세뷰):', res);
+      hideLoading(true);
       btn.disabled = false;
       btn.textContent = '📤 VIRTUAL 전송';
 
       if(res && res.success){
         msg.textContent = `✅ 전송 성공! Row ${res.row} 업데이트됨 (선택: ${selectedSeats.length}명)`;
         msg.style.color = '#22c55e';
+        vibrate(HAPTIC.MEDIUM); // 선택 작업 햅틱
 
         // 리스트 항목에도 시각적 표시
         const selectedCard = document.querySelector('#list .seatCard.selected');
@@ -1110,6 +1188,7 @@ function sendCurrentHandToVirtual(){
       setTimeout(()=>{msg.textContent=''; msg.style.color='';}, 5000);
     })
     .withFailureHandler(err=>{
+      hideLoading(false); // 실패 시 햅틱 없음
       btn.disabled = false;
       btn.textContent = '📤 VIRTUAL 전송';
       msg.textContent = `❌ 오류: ${err.message||err}`;
@@ -1132,9 +1211,14 @@ function loadList(reset){
   if(reviewState.loading||!reviewState.hasMore) return;
   reviewState.loading=true;
   const box=document.getElementById('list');
-  if(reset) box.innerHTML='<div class="small muted" style="padding:8px">불러오는 중…</div>';
+
+  // v3.6.0: 스마트 로딩 (compact 모드, 리스트 조회)
+  if(reset) showLoading('핸드 리스트 조회 중...', { mode: 'compact', percent: 50, haptic: false });
+
   google.script.run.withSuccessHandler(data=>{
     reviewState.loading=false;
+    if(reset) hideLoading(true);
+
     if(data.error){ box.innerHTML=`<div class="small" style="color:#ffbdbd">오류: ${data.error}</div>`; return; }
     reviewState.total=data.total;
     document.getElementById('listInfo').textContent=`총 ${reviewState.total}건 (${reviewState.page}페이지)`;
@@ -1155,6 +1239,7 @@ function loadList(reset){
     }
   }).withFailureHandler(err=>{
     reviewState.loading=false;
+    if(reset) hideLoading(false);
     box.innerHTML=`<div class="small" style="color:#ffbdbd">로드 오류: ${(err.message||err)}</div>`;
   }).queryHands({},{num:reviewState.page,size:reviewState.size});
 }
@@ -1183,9 +1268,13 @@ function selectAndLoadDetail(id,el){
 function loadDetail(id){
   const d = document.getElementById('detail');
   if (!id || String(id).trim() === '') { d.innerHTML = `<div class="small" style="color:#ffbdbd">잘못된 hand id</div>`; return; }
-  d.textContent = '상세 불러오는 중…';
+
+  // v3.6.0: 스마트 로딩 (150ms 작업 - 표시 안 될 확률 높음)
+  showLoading('핸드 상세 조회 중...', { mode: 'compact', percent: 50, haptic: false });
+
   google.script.run
     .withSuccessHandler(x=>{
+      hideLoading(true);
       try{
         if (!x) { d.innerHTML = `<div class="small" style="color:#ffbdbd">서버 응답 없음(undefined) · id=${id}</div>`; return; }
         if (x.error) { d.innerHTML = `<div class="small" style="color:#ffbdbd">오류: ${x.error} · id=${id}</div>`; return; }
@@ -1204,6 +1293,7 @@ function loadDetail(id){
       }
     })
     .withFailureHandler(err=>{
+      hideLoading(false);
       const msg = (err && (err.message || err.toString())) || 'unknown failure';
       d.innerHTML = `<div class="small" style="color:#ffbdbd">로드 실패: ${msg} · id=${id}</div>`;
     })
