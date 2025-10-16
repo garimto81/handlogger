@@ -8,9 +8,18 @@
 
 // VERSION.json 내용을 여기 복사 (syncVersionFromJson 실행 시 ScriptProperties에 저장됨)
 const VERSION_JSON = {
-  "current": "3.6.0",
+  "current": "3.6.2",
   "date": "2025-01-16",
   "changelog": {
+    "3.6.2": {
+      "date": "2025-01-16",
+      "type": "patch",
+      "changes": [
+        "🔴 Critical Bug Fix: stacks_json 데이터 정렬 오류 수정",
+        "bb_amount 컬럼 제거 (CSV 스키마와 불일치 해소)",
+        "Review 탭: holes_json에서 플레이어 정보 추출 (stacks 없어도 표시)"
+      ]
+    },
     "3.6.0": {
       "date": "2025-01-16",
       "type": "minor",
@@ -205,7 +214,7 @@ function ensureSheets_(){
     'hand_id','client_uuid','table_id','hand_no',
     'start_street','started_at','ended_at','btn_seat',
     'board_f1','board_f2','board_f3','board_turn','board_river',
-    'pre_pot','bb_amount','winner_seat','pot_final','stacks_json','holes_json','schema_ver'
+    'pre_pot','winner_seat','pot_final','stacks_json','holes_json','schema_ver'
   ]);
   setHeaderIfEmpty_(getOrCreateSheet_(ss,SH.ACTS),[
     'hand_id','seq','street','seat','action',
@@ -559,7 +568,6 @@ function _saveCore_(payload){
     String(payload.start_street||''), String(payload.started_at||new Date().toISOString()), String(payload.ended_at||''), String(payload.btn_seat||''),
     String(b.f1||''), String(b.f2||''), String(b.f3||''), String(b.turn||''), String(b.river||''),
     Number(payload.pre_pot||0),
-    Number(payload.bb_amount||0), // v3.3.3: BB 값 저장
     '', // winner_seat 제거(v1.1) — 공란 유지
     String(payload.pot_final||''),
     JSON.stringify(payload.stack_snapshot||{}),
@@ -737,7 +745,6 @@ function getHandDetail(hand_id){
             river: r[m['board_river']] || ''
           },
           pre_pot: Number(r[m['pre_pot']] || 0),
-          bb_amount: Number(r[m['bb_amount']] || 0), // v3.3.3: BB 값 반환
           winner_seat: '', // v1.1: winner 제거
           pot_final: String(r[m['pot_final']] || ''),
           stacks_json: String(r[m['stacks_json']]||'{}'),

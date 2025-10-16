@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HandLogger 클라이언트 성능 테스트</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0b0d12;
+      color: #e7eaf0;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 { color: #2a6fff; }
+    h2 { color: #a9b8ff; margin-top: 30px; }
+    .result {
+      background: #101522;
+      border: 1px solid #2a3249;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .fast { color: #22c55e; }
+    .medium { color: #f59e0b; }
+    .slow { color: #ef4444; }
+    button {
+      background: #2a6fff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #1e5bdd; }
+    .status { margin: 20px 0; font-size: 18px; }
+    pre {
+      background: #0f1320;
+      border: 1px solid #2a3249;
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚡ HandLogger 클라이언트 성능 테스트</h1>
+
+  <div class="status" id="status">준비됨</div>
+
+  <button onclick="runAllTests()">전체 테스트 실행</button>
+  <button onclick="testDOMOperations()">DOM 연산 테스트</button>
+  <button onclick="testDataProcessing()">데이터 처리 테스트</button>
+  <button onclick="testRenderPerformance()">렌더링 테스트</button>
+  <button onclick="clearResults()">결과 지우기</button>
+
+  <h2>📊 테스트 결과</h2>
+  <div id="results"></div>
+
+  <script>
+    const results = [];
+
+    function log(message, type = 'info') {
+      const div = document.createElement('div');
+      div.className = 'result';
+      div.innerHTML = message;
+      document.getElementById('results').appendChild(div);
+      console.log(message.replace(/<[^>]*>/g, ''));
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+      results.length = 0;
+    }
+
+    function updateStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    function measureTime(name, fn) {
+      const start = performance.now();
+      try {
+        const result = fn();
+        const time = performance.now() - start;
+
+        const timeStr = time < 1 ? `${time.toFixed(2)}ms` : `${time.toFixed(0)}ms`;
+        const className = time < 10 ? 'fast' : time < 50 ? 'medium' : 'slow';
+        const icon = time < 10 ? '🟢' : time < 50 ? '🟡' : '🔴';
+
+        results.push({ name, time, success: true });
+        log(`${icon} <span class="${className}">${name}: ${timeStr}</span>`);
+        return result;
+      } catch(e) {
+        results.push({ name, time: 0, success: false, error: e.message });
+        log(`❌ ${name}: 오류 - ${e.message}`);
+        return null;
+      }
+    }
+
+    // ===== 전체 테스트 =====
+    function runAllTests() {
+      clearResults();
+      updateStatus('테스트 실행 중...');
+
+      log('<h3>🔍 DOM 연산 테스트</h3>');
+      testDOMOperations();
+
+      log('<h3>⚙️ 데이터 처리 테스트</h3>');
+      testDataProcessing();
+
+      log('<h3>🎨 렌더링 테스트</h3>');
+      testRenderPerformance();
+
+      // 결과 요약
+      setTimeout(() => {
+        showSummary();
+        updateStatus('테스트 완료');
+      }, 100);
+    }
+
+    // ===== DOM 연산 테스트 =====
+    function testDOMOperations() {
+      // 1. getElementById 성능
+      measureTime('getElementById (100회)', () => {
+        for(let i = 0; i < 100; i++) {
+          document.getElementById('results');
+        }
+      });
+
+      // 2. querySelector 성능
+      measureTime('querySelector (100회)', () => {
+        for(let i = 0; i < 100; i++) {
+          document.querySelector('#results');
+        }
+      });
+
+      // 3. createElement + appendChild
+      measureTime('createElement + appendChild (100개)', () => {
+        const container = document.createElement('div');
+        for(let i = 0; i < 100; i++) {
+          const div = document.createElement('div');
+          div.textContent = `Item ${i}`;
+          container.appendChild(div);
+        }
+      });
+
+      // 4. innerHTML (단일 할당)
+      measureTime('innerHTML (100개 요소)', () => {
+        const container = document.createElement('div');
+        let html = '';
+        for(let i = 0; i < 100; i++) {
+          html += `<div>Item ${i}</div>`;
+        }
+        container.innerHTML = html;
+      });
+
+      // 5. classList 조작
+      measureTime('classList.add/remove (1000회)', () => {
+        const div = document.createElement('div');
+        for(let i = 0; i < 1000; i++) {
+          div.classList.add('test');
+          div.classList.remove('test');
+        }
+      });
+    }
+
+    // ===== 데이터 처리 테스트 =====
+    function testDataProcessing() {
+      // 1. JSON.parse (작은 객체)
+      const smallJson = JSON.stringify({ seat: 1, player: 'Test', chips: 10000 });
+      measureTime('JSON.parse (작은 객체)', () => {
+        for(let i = 0; i < 1000; i++) {
+          JSON.parse(smallJson);
+        }
+      });
+
+      // 2. JSON.parse (큰 객체 - 핸드 데이터)
+      const largeJson = JSON.stringify({
+        hand_id: '20250116_123456',
+        table_id: '1',
+        actions: Array(50).fill({ seq: 1, street: 'preflop', seat: '1', action: 'call' })
+      });
+      measureTime('JSON.parse (큰 객체)', () => {
+        for(let i = 0; i < 100; i++) {
+          JSON.parse(largeJson);
+        }
+      });
+
+      // 3. Array.map (1000개)
+      const arr = Array(1000).fill(0).map((_, i) => i);
+      measureTime('Array.map (1000개)', () => {
+        arr.map(x => x * 2);
+      });
+
+      // 4. Array.filter (1000개)
+      measureTime('Array.filter (1000개)', () => {
+        arr.filter(x => x % 2 === 0);
+      });
+
+      // 5. Array.sort (1000개)
+      const unsorted = [...arr].reverse();
+      measureTime('Array.sort (1000개)', () => {
+        [...unsorted].sort((a, b) => a - b);
+      });
+
+      // 6. String.replace (정규식)
+      const str = '1234567890'.repeat(100);
+      measureTime('String.replace (정규식, 1000자)', () => {
+        str.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      });
+
+      // 7. Object 복사 (spread)
+      const obj = { a: 1, b: 2, c: 3, d: 4, e: 5 };
+      measureTime('Object spread (1000회)', () => {
+        for(let i = 0; i < 1000; i++) {
+          const copy = { ...obj };
+        }
+      });
+
+      // 8. Object 복사 (Object.assign)
+      measureTime('Object.assign (1000회)', () => {
+        for(let i = 0; i < 1000; i++) {
+          const copy = Object.assign({}, obj);
+        }
+      });
+    }
+
+    // ===== 렌더링 테스트 =====
+    function testRenderPerformance() {
+      // 1. 카드 배지 렌더링 (52개)
+      measureTime('카드 배지 렌더링 (52개)', () => {
+        const suits = ['s', 'h', 'd', 'c'];
+        const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+        let html = '';
+        suits.forEach(suit => {
+          ranks.forEach(rank => {
+            html += `<span class="cardBadge cb-${suit}">${rank}</span>`;
+          });
+        });
+        const div = document.createElement('div');
+        div.innerHTML = html;
+      });
+
+      // 2. 핸드 리스트 렌더링 (50개)
+      measureTime('핸드 리스트 렌더링 (50개)', () => {
+        let html = '';
+        for(let i = 0; i < 50; i++) {
+          html += `
+            <div class="seatCard">
+              <div><b>#${i}</b> · Table 1 · BTN 5</div>
+              <div class="small">2025-01-16 12:00:00</div>
+            </div>
+          `;
+        }
+        const div = document.createElement('div');
+        div.innerHTML = html;
+      });
+
+      // 3. 좌석 Pills 렌더링 (9개)
+      measureTime('좌석 Pills 렌더링 (9개)', () => {
+        let html = '';
+        for(let i = 1; i <= 9; i++) {
+          html += `
+            <div class="seatPill">
+              <div>${i}</div>
+              <div class="small">Player ${i}</div>
+            </div>
+          `;
+        }
+        const div = document.createElement('div');
+        div.innerHTML = html;
+      });
+
+      // 4. 액션 로그 렌더링 (20개)
+      measureTime('액션 로그 렌더링 (20개)', () => {
+        let html = '';
+        const actions = ['fold', 'call', 'raise', 'bet', 'check'];
+        for(let i = 0; i < 20; i++) {
+          const action = actions[i % actions.length];
+          html += `<span class="actBadge act-${action}">${action.toUpperCase()}</span>`;
+        }
+        const div = document.createElement('div');
+        div.innerHTML = html;
+      });
+
+      // 5. 보드 카드 렌더링 (5장)
+      measureTime('보드 카드 렌더링 (5장)', () => {
+        const cards = ['As', 'Kh', 'Qd', 'Jc', 'Ts'];
+        let html = '';
+        cards.forEach(card => {
+          const rank = card[0];
+          const suit = card[1];
+          const symbol = suit === 's' ? '♠' : suit === 'h' ? '♥' : suit === 'd' ? '♦' : '♣';
+          html += `<span class="cardBadge cb-${suit}">${rank}${symbol}</span>`;
+        });
+        const div = document.createElement('div');
+        div.innerHTML = html;
+      });
+    }
+
+    // ===== 결과 요약 =====
+    function showSummary() {
+      log('<h3>📈 요약</h3>');
+
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
+
+      log(`총 ${results.length}개 테스트 (성공: ${successful.length}, 실패: ${failed.length})`);
+
+      if(successful.length > 0) {
+        // 가장 느린 5개
+        const slowest = [...successful].sort((a, b) => b.time - a.time).slice(0, 5);
+        log('<h4>🐌 가장 느린 5개:</h4>');
+        slowest.forEach((r, i) => {
+          log(`${i+1}. ${r.name}: ${r.time.toFixed(2)}ms`);
+        });
+
+        // 가장 빠른 5개
+        const fastest = [...successful].sort((a, b) => a.time - b.time).slice(0, 5);
+        log('<h4>⚡ 가장 빠른 5개:</h4>');
+        fastest.forEach((r, i) => {
+          log(`${i+1}. ${r.name}: ${r.time.toFixed(2)}ms`);
+        });
+
+        // 평균 시간
+        const avgTime = successful.reduce((sum, r) => sum + r.time, 0) / successful.length;
+        log(`<h4>📊 평균 시간: ${avgTime.toFixed(2)}ms</h4>`);
+      }
+
+      if(failed.length > 0) {
+        log('<h4>❌ 실패한 테스트:</h4>');
+        failed.forEach(r => {
+          log(`- ${r.name}: ${r.error}`);
+        });
+      }
+    }
+
+    // 자동 실행 (페이지 로드 시)
+    window.addEventListener('load', () => {
+      log('준비 완료. 버튼을 클릭하여 테스트를 시작하세요.');
+    });
+  </script>
+</body>
+</html>

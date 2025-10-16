@@ -1075,7 +1075,6 @@ function commitHand(){
     btn_seat:S.btnSeat||'',
     board:getBoardObjectForSave(),
     pre_pot:S.prePot||'',
-    bb_amount:S.bbValue||0, // v3.3.3: BB 값 저장
     winner_seat:'',
     pot_final:'',
     actions:S.actions.map(x=>Object.assign({},x)),
@@ -1424,10 +1423,14 @@ function renderPlayerRows(head){
   const holes=safeJson_(head.holes_json||'{}');
   const btnSeat=toInt(head.btn_seat);
   const tableId=head.table_id;
-  const seats=Object.keys(stacks).sort((a,b)=>toInt(a)-toInt(b));
-  if(!seats.length) return '';
 
-  const rows=seats.map(s=>{
+  // v3.6.1: stacks_json이 비어있으면 holes_json에서 좌석 추출
+  const stackSeats=Object.keys(stacks);
+  const holeSeats=Object.keys(holes);
+  const allSeats=[...new Set([...stackSeats,...holeSeats])].sort((a,b)=>toInt(a)-toInt(b));
+  if(!allSeats.length) return '';
+
+  const rows=allSeats.map(s=>{
     const seat=toInt(s);
     const fullName=getSeatNameByTable(tableId,seat);
     const name=seatNameOnly(seat,fullName);
@@ -1479,8 +1482,7 @@ function renderDetailContent(head,acts){
 
 function renderVirtualSection(head, participants){
   // v3.3.3: 핸드에 저장된 BB 우선 사용, 없으면 전역 설정값 사용
-  const handBB = (head && head.bb_amount) ? head.bb_amount : 0;
-  const defaultBB = handBB > 0 ? handBB : (S.bbValue || 0);
+  const defaultBB = S.bbValue || 0;
   const handId = head ? head.hand_id : '';
 
   // v3.3.3: 세로 방향 레이아웃 (각 플레이어 별도 줄)

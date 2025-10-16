@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.6.0
+# Poker Hand Logger v3.6.2
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,24 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🔴 v3.6.2 (2025-01-16) - Critical Bug Fix
+
+### Bug Fixes
+- **stacks_json 데이터 정렬 오류 수정**: v3.3.3에서 추가된 `bb_amount` 컬럼이 CSV 스키마와 불일치하여 stacks_json이 잘못된 컬럼에 저장되던 문제 해결
+- **bb_amount 컬럼 제거**: CSV 헤더에 없는 컬럼 저장 시도로 인한 데이터 오염 방지
+- **Review 탭 플레이어 표시 개선**: stacks_json이 비어있어도 holes_json에서 플레이어 정보 추출하여 표시
+
+### Impact
+```
+Before: stacks_json → pot_final 컬럼에 저장 (오염)
+        holes_json → stacks_json 컬럼에 저장 (오염)
+
+After:  stacks_json → stacks_json 컬럼에 정상 저장
+        holes_json → holes_json 컬럼에 정상 저장
+```
 
 ---
 
