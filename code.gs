@@ -887,9 +887,17 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     log_('PUSH_VIRTUAL_BEGIN', `hand_id=${hand_id} payload=${payloadStr}`, '');
     Logger.log('🚀 [VIRTUAL] 시작 - hand_id: ' + hand_id + ' sheetId: ' + sheetId + ' payload: ' + payloadStr);
 
+    // ⏱️ 성능 측정 시작
+    const perfTimer = {
+      start: Date.now(),
+      steps: {}
+    };
+
     // 1. 핸드 상세 조회
+    const t1 = Date.now();
     const detail = getHandDetail(hand_id);
     if(!detail || !detail.head) throw new Error(`Hand not found: ${hand_id}`);
+    perfTimer.steps.getHandDetail = Date.now() - t1;
 
     const head = detail.head;
     const isoTime = head.started_at || nowKST_().toISOString();
@@ -897,10 +905,12 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     Logger.log('📋 [VIRTUAL] 핸드 상세: table_id=' + head.table_id + ' hand_no=' + head.hand_no + ' started_at=' + isoTime + ' hhmmTime=' + hhmmTime);
 
     // 2. VIRTUAL 시트 열기
+    const t2 = Date.now();
     const ss = SpreadsheetApp.openById(sheetId);
     const sh = ss.getSheetByName('VIRTUAL') || ss.getSheets()[0];
     const sheetName = sh.getName();
     const last = sh.getLastRow();
+    perfTimer.steps.openSheet = Date.now() - t2;
     Logger.log('📄 [VIRTUAL] 타겟 시트: sheetId=' + sheetId + ' sheetName=' + sheetName + ' lastRow=' + last);
 
     if(last < 2){
@@ -910,13 +920,16 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     }
 
     // 3. C열 Time 매칭 (started_at 시간과 정확히 일치하는 행 찾기)
+    const t3 = Date.now();
     const rngVals = sh.getRange(2,3,last-1,1).getValues();
     const rngDisp = sh.getRange(2,3,last-1,1).getDisplayValues();
     const rngE = sh.getRange(2,5,last-1,1).getValues(); // E열 상태 확인
-    Logger.log('🔍 [VIRTUAL] C열 Time 검색 중... (목표: ' + hhmmTime + ')');
+    perfTimer.steps.readColumns = Date.now() - t3;
+    Logger.log('🔍 [VIRTUAL] C열 Time 검색 중... (목표: ' + hhmmTime + ') - 스캔 행 수: ' + (last-1));
 
     let pickRow = -1;
     let debugInfo = [];
+    const t4 = Date.now();
     for(let i=0; i<rngVals.length; i++){
       const raw = rngVals[i][0];
       const disp = rngDisp[i][0];
@@ -938,6 +951,7 @@ function sendHandToVirtual(hand_id, sheetId, payload){
         break;
       }
     }
+    perfTimer.steps.scanRows = Date.now() - t4;
 
     if(pickRow < 0){
       log_('PUSH_VIRTUAL_FAIL', `no-match: ${hhmmTime}. Checked: ${debugInfo.join(', ')}`, '');
@@ -950,11 +964,13 @@ function sendHandToVirtual(hand_id, sheetId, payload){
 
     // 4. 값 구성
     console.log('🔧 [VIRTUAL] 값 생성 시작...');
+    const t5 = Date.now();
     const E = '미완료';
     const F = buildFileName_(detail);
     const G = 'A';
     const H = buildHistoryBlock_(detail, payload.bbOverride || 0);
     const J = buildSubtitle_(detail, payload);
+    perfTimer.steps.buildValues = Date.now() - t5;
 
     console.log('📝 [VIRTUAL] 생성된 값:', {
       E: E,
@@ -1011,6 +1027,7 @@ function sendHandToVirtual(hand_id, sheetId, payload){
 
     // 5. 비연속 컬럼 쓰기 (E,F,G,H,J,K => 5,6,7,8,10,11)
     console.log('💾 [VIRTUAL] 시트 쓰기 시작 (Row: ' + pickRow + ')');
+    const t6 = Date.now();
     sh.getRange(pickRow, 5, 1, 1).setValue(E);
     console.log('  ✓ E열 (col 5) 완료');
     sh.getRange(pickRow, 6, 1, 1).setValue(F);
@@ -1023,9 +1040,28 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     console.log('  ✓ J열 (col 10) 완료 - 입력값:', J.slice(0, 100) + (J.length > 100 ? '...' : ''));
     sh.getRange(pickRow,11, 1, 1).setValue('버추얼 테이블');
     console.log('  ✓ K열 (col 11) 완료 - 입력값: 버추얼 테이블');
+    perfTimer.steps.writeSheet = Date.now() - t6;
+
+    // ⏱️ 성능 측정 결과 출력
+    perfTimer.total = Date.now() - perfTimer.start;
+    Logger.log('⏱️ [PERF] VIRTUAL 전송 성능 분석:');
+    Logger.log('  ├─ 핸드 상세 조회: ' + perfTimer.steps.getHandDetail + 'ms');
+    Logger.log('  ├─ 시트 열기: ' + perfTimer.steps.openSheet + 'ms');
+    Logger.log('  ├─ 컬럼 읽기 (' + (last-1) + '행): ' + perfTimer.steps.readColumns + 'ms');
+    Logger.log('  ├─ 행 스캔 (' + (last-1) + '행): ' + perfTimer.steps.scanRows + 'ms');
+    Logger.log('  ├─ 값 생성: ' + perfTimer.steps.buildValues + 'ms');
+    Logger.log('  ├─ 시트 쓰기: ' + perfTimer.steps.writeSheet + 'ms');
+    Logger.log('  └─ 총 소요 시간: ' + perfTimer.total + 'ms');
+    Logger.log('');
+    Logger.log('📊 [PERF] 병목 분석:');
+    const bottleneck = Object.keys(perfTimer.steps).reduce((max, key) =>
+      perfTimer.steps[key] > perfTimer.steps[max] ? key : max
+    );
+    Logger.log('  🔴 가장 느린 단계: ' + bottleneck + ' (' + perfTimer.steps[bottleneck] + 'ms, ' +
+      Math.round(perfTimer.steps[bottleneck] / perfTimer.total * 100) + '%)');
 
     log_('PUSH_VIRTUAL_OK', `row=${pickRow}`, '');
-    const result = {success:true, row:pickRow};
+    const result = {success:true, row:pickRow, perf:perfTimer};
     console.log('🎉 [VIRTUAL] 완료 - Row ' + pickRow + '에 데이터 입력 성공');
     console.log('sendHandToVirtual returning:', JSON.stringify(result));
     return result;
@@ -1370,3 +1406,85 @@ function log_(code,msg,tableId){
 }
 
 function include_(name){ return HtmlService.createHtmlOutputFromFile(name).getContent(); }
+
+/* ===== 성능 측정 테스트 함수 ===== */
+/**
+ * VIRTUAL 전송 성능 측정 테스트
+ * Apps Script Editor에서 실행 가능
+ *
+ * 사용법:
+ * 1. 아래 변수를 실제 값으로 수정
+ * 2. Apps Script Editor에서 실행 > 함수 실행 > testVirtualPerformance
+ * 3. 실행 로그 확인 (Ctrl+Enter)
+ */
+function testVirtualPerformance(){
+  // ⚠️ 테스트 전에 수정 필요
+  const TEST_HAND_ID = '20251017_023200765'; // 실제 hand_id로 변경
+  const TEST_VIRTUAL_SHEET_ID = ''; // VIRTUAL 시트가 있는 스프레드시트 ID
+  const TEST_PAYLOAD = {
+    selectedSeats: ['4', '7'], // 테스트용 좌석
+    eliminatedSeats: [],
+    stackOverrides: {},
+    bbOverride: 2000
+  };
+
+  Logger.log('🧪 [TEST] VIRTUAL 성능 측정 시작');
+  Logger.log('  Hand ID: ' + TEST_HAND_ID);
+  Logger.log('  Sheet ID: ' + TEST_VIRTUAL_SHEET_ID);
+
+  if(!TEST_VIRTUAL_SHEET_ID || TEST_VIRTUAL_SHEET_ID === ''){
+    Logger.log('❌ [TEST] 실패: TEST_VIRTUAL_SHEET_ID를 설정하세요');
+    Logger.log('');
+    Logger.log('💡 설정 방법:');
+    Logger.log('  1. VIRTUAL 시트가 있는 스프레드시트 열기');
+    Logger.log('  2. URL에서 ID 복사 (https://docs.google.com/spreadsheets/d/{여기}/edit)');
+    Logger.log('  3. code.gs의 TEST_VIRTUAL_SHEET_ID 변수에 붙여넣기');
+    return;
+  }
+
+  try {
+    const result = sendHandToVirtual(TEST_HAND_ID, TEST_VIRTUAL_SHEET_ID, TEST_PAYLOAD);
+
+    Logger.log('');
+    Logger.log('✅ [TEST] 성공!');
+    Logger.log('  Row 업데이트: ' + result.row);
+    Logger.log('');
+    Logger.log('📊 [TEST] 성능 요약:');
+    if(result.perf){
+      const p = result.perf;
+      Logger.log('  총 소요 시간: ' + p.total + 'ms');
+      Logger.log('  ├─ 핸드 조회: ' + p.steps.getHandDetail + 'ms (' + Math.round(p.steps.getHandDetail/p.total*100) + '%)');
+      Logger.log('  ├─ 시트 열기: ' + p.steps.openSheet + 'ms (' + Math.round(p.steps.openSheet/p.total*100) + '%)');
+      Logger.log('  ├─ 컬럼 읽기: ' + p.steps.readColumns + 'ms (' + Math.round(p.steps.readColumns/p.total*100) + '%)');
+      Logger.log('  ├─ 행 스캔: ' + p.steps.scanRows + 'ms (' + Math.round(p.steps.scanRows/p.total*100) + '%)');
+      Logger.log('  ├─ 값 생성: ' + p.steps.buildValues + 'ms (' + Math.round(p.steps.buildValues/p.total*100) + '%)');
+      Logger.log('  └─ 시트 쓰기: ' + p.steps.writeSheet + 'ms (' + Math.round(p.steps.writeSheet/p.total*100) + '%)');
+
+      Logger.log('');
+      Logger.log('🔍 [TEST] 병목 분석:');
+      const bottleneck = Object.keys(p.steps).reduce((max, key) =>
+        p.steps[key] > p.steps[max] ? key : max
+      );
+      const pct = Math.round(p.steps[bottleneck] / p.total * 100);
+      Logger.log('  🔴 가장 느린 작업: ' + bottleneck + ' (' + p.steps[bottleneck] + 'ms, ' + pct + '%)');
+
+      // 진단
+      Logger.log('');
+      Logger.log('💡 [TEST] 진단:');
+      if(p.steps.readColumns + p.steps.scanRows > p.total * 0.7){
+        Logger.log('  ⚠️ VIRTUAL 시트 크기가 성능에 큰 영향을 미칩니다');
+        Logger.log('  📌 권장: 역순 스캔 또는 인덱스 컬럼 추가');
+      }
+      if(p.steps.openSheet > 1000){
+        Logger.log('  ⚠️ 시트 열기가 느립니다 (복잡한 수식 또는 대용량 시트)');
+      }
+      if(p.steps.buildValues > 500){
+        Logger.log('  ⚠️ 값 생성 로직 최적화 필요');
+      }
+    }
+  } catch(e) {
+    Logger.log('');
+    Logger.log('❌ [TEST] 실패: ' + e.message);
+    Logger.log('  Stack: ' + e.stack);
+  }
+}
