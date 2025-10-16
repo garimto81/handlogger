@@ -112,6 +112,7 @@ select#tableSel:has(option.keyplayer-option:checked) {
 .boardSection{margin:4px 0}
 .playerSection{margin:4px 0}
 .playerRow{display:flex;gap:4px;padding:1px 0;align-items:center;font-size:0.7rem;flex-wrap:wrap}
+.playerSeat{font-weight:700;min-width:32px;color:var(--muted);font-size:0.65rem}
 .playerName{font-weight:700;min-width:50px}
 .playerHole{display:flex;gap:2px}
 .playerStack{color:var(--muted);margin-left:auto}
@@ -260,7 +261,8 @@ const S={tables:[],roster:{},cfg:{},
   toCall:0,pot:0,contrib:{},allin:{},folded:{},actorIdx:0,order:[],acted:new Set(),
   holes:{},holePickSeat:null,handNo:'',stacks:{},
   virtualSheetId:'',bbValue:0,
-  nextHandNo:1}; // v3.3.0: 다음 핸드 번호 (자동 증가)
+  nextHandNo:1, // v3.3.0: 다음 핸드 번호 (자동 증가)
+  sentHandIds:new Set()}; // v3.6.3: VIRTUAL 중복 전송 방지
 
 const SUITS=['s','h','d','c'];
 const RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
@@ -1117,6 +1119,12 @@ function sendCurrentHandToVirtual(){
   if(!S.virtualSheetId){ alert('VIRTUAL 시트 ID를 먼저 설정하세요'); return; }
   if(!reviewState.selectedId){ alert('핸드가 선택되지 않았습니다'); return; }
 
+  // v3.6.3: 중복 전송 방지
+  if(S.sentHandIds.has(reviewState.selectedId)){
+    alert('⚠️ 이미 전송한 핸드입니다.\n\n같은 핸드를 다시 전송하려면 페이지를 새로고침하세요.');
+    return;
+  }
+
   // 1. 선택된 플레이어 seat 배열 (자막에 표시할 플레이어)
   const selectedSeats = Array.from(document.querySelectorAll('.player-select-chk:checked'))
     .map(chk => chk.value);
@@ -1165,9 +1173,15 @@ function sendCurrentHandToVirtual(){
       console.log('VIRTUAL 전송 응답 (상세뷰):', res);
       hideLoading(true);
       btn.disabled = false;
-      btn.textContent = '📤 VIRTUAL 전송';
 
       if(res && res.success){
+        // v3.6.3: 전송 성공 시 hand_id 추가
+        S.sentHandIds.add(reviewState.selectedId);
+
+        btn.textContent = '✅ 전송 완료';
+        btn.style.backgroundColor = '#22c55e';
+        btn.style.borderColor = '#22c55e';
+
         msg.textContent = `✅ 전송 성공! Row ${res.row} 업데이트됨 (선택: ${selectedSeats.length}명)`;
         msg.style.color = '#22c55e';
         vibrate(HAPTIC.MEDIUM); // 선택 작업 햅틱
@@ -1180,6 +1194,7 @@ function sendCurrentHandToVirtual(){
         }
       }else{
         console.log('전송 실패 - res:', res);
+        btn.textContent = '📤 VIRTUAL 전송';
         msg.textContent = `❌ 전송 실패: ${res.reason||'알 수 없는 오류'}`;
         msg.style.color = '#ef4444';
       }
@@ -1418,6 +1433,12 @@ function getSeatNameByTable(tableId,seat){
   return s?.player || `Seat ${seat}`;
 }
 
+function isKeyplayer(tableId,seat){
+  const roster=S.roster[tableId]||[];
+  const s=roster.find(x=>toInt(x.seat)===toInt(seat));
+  return !!(s && s.keyplayer);
+}
+
 function renderPlayerRows(head){
   const stacks=safeJson_(head.stacks_json||'{}');
   const holes=safeJson_(head.holes_json||'{}');
@@ -1435,12 +1456,15 @@ function renderPlayerRows(head){
     const fullName=getSeatNameByTable(tableId,seat);
     const name=seatNameOnly(seat,fullName);
     const pos=(seat===btnSeat)?' BTN':'';
+    const isKey=isKeyplayer(tableId,seat);
+    const keyIcon=isKey?'⭐':'';
     const holeCards=holes[s]||[];
     const holeHTML=(holeCards[0]&&holeCards[1])
       ?renderCardBadge(holeCards[0],'compact')+renderCardBadge(holeCards[1],'compact')
       :'<span class="muted" style="font-size:0.7rem">-</span>';
     const stack=stacks[s]?formatCompact(toInt(stacks[s])):'-';
     return `<div class="playerRow">
+      <span class="playerSeat">${keyIcon}#${seat}</span>
       <span class="playerName">${name}${pos}</span>
       <span class="playerHole">${holeHTML}</span>
       <span class="playerStack">${stack}</span>

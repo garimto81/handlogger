@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.6.2
+# Poker Hand Logger v3.6.3
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,36 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.6.3 (2025-01-16) - Performance & Reliability
+
+### Performance Optimization
+- ⚡ **캐시 활용 최적화**: readRoster_() → getCachedRoster_() 전환 (4개 함수)
+  - nameShort_(), nationOf_(), extractKeyplayerName_(), buildSubtitle_()
+  - Review 탭 리스트 로딩: **4.7초 → 275ms (94% 개선)**
+  - 핸드 상세 로딩: **4.1초 → 150ms (96% 개선)**
+- 🔧 **initializeCache() 함수 추가**: Apps Script 에디터에서 수동 실행 필요
+  - Roster 캐시 (PropertiesService, 5분 TTL)
+  - Config 캐시 (CacheService, 1분 TTL)
+
+### Bug Fixes
+- 🔒 **VIRTUAL 중복 전송 방지**: 클라이언트 사이드 hand_id 추적
+  - 이미 전송한 핸드 재전송 시 경고 메시지 표시
+  - 전송 성공 시 녹색 버튼 + "✅ 전송 완료" 표시
+  - 페이지 새로고침으로 추적 상태 초기화
+
+### Features
+- 👤 **핸드 상세 정보 개선**: 좌석 번호 + 키플레이어 표시
+  - 좌석 번호: `#4`, `#7` 형식
+  - 키플레이어: ⭐ 별표 아이콘 표시
+
+### Setup Required
+```javascript
+// Apps Script 에디터에서 실행 (최초 1회)
+initializeCache()
+```
 
 ---
 

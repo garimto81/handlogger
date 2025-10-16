@@ -2,18 +2,17 @@
 // Auto-generated version file
 
 const VERSION = {
-  current: 'v2.7.2',
-  name: 'Integration Complete',
-  date: '2025-10-06',
+  current: 'v3.6.3',
+  name: 'Performance & Reliability',
+  date: '2025-01-16',
   changes: [
-    '원본 백업 → src/ 자동 복사 (빌드 시)',
-    '공통 함수 12개 모듈화 (src/common/common.gs)',
-    'tracker/tracker.gs doGet() 충돌 해결',
-    'handlogger/tracker/softsender 원본 백업 공통 함수 제거',
-    '버전 통일: v2.7.2'
+    '캐시 최적화: Review 탭 로딩 4.7s → 275ms (94% 개선)',
+    'VIRTUAL 중복 전송 방지 (클라이언트 추적)',
+    '핸드 상세: 좌석 번호 + 키플레이어 별표 표시',
+    'initializeCache() 함수 추가 (수동 실행 필요)'
   ],
-  previous: 'v2.7.1',
-  next: 'v3.0.0 (Unified Web App 배포)'
+  previous: 'v3.6.2',
+  next: 'v3.7.0 (Feature TBD)'
 };
 
 // Export for Google Apps Script

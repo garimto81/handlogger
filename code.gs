@@ -141,6 +141,26 @@ function syncVersionFromJson() {
   Logger.log(`Current version: ${VERSION_JSON.current}`);
 }
 
+// 캐시 초기화 함수 (최초 1회 실행 - Apps Script Editor에서 실행)
+function initializeCache() {
+  Logger.log('🚀 캐시 초기화 시작...');
+
+  // Roster 캐시 초기화
+  const roster = readRoster_();
+  PropertiesService.getScriptProperties().setProperties({
+    'roster_cache': JSON.stringify(roster),
+    'roster_cache_time': String(Date.now())
+  });
+  Logger.log('✅ Roster 캐시 초기화 완료 (TTL: 5분)');
+
+  // Config 캐시 초기화
+  const config = readConfig_();
+  CacheService.getScriptCache().put('config_cache', JSON.stringify(config), CACHE_TTL.CONFIG);
+  Logger.log('✅ Config 캐시 초기화 완료 (TTL: 1분)');
+
+  Logger.log('🎉 캐시 초기화 완료! 이제 빠른 속도로 작동합니다.');
+}
+
 const APP_SPREADSHEET_ID = '19e7eDjoZRFZooghZJF3XmOZzZcgmqsp9mFAfjvJWhj4'; // HANDS/ACTIONS/CONFIG/LOG/ROSTER 통합 저장소
 const ROSTER_SHEET_NAME = 'Type'; // 플레이어 명부 시트 (APP_SPREADSHEET 내부, 영구 고정)
 const SH = { HANDS:'HANDS', ACTS:'ACTIONS', CONFIG:'CONFIG', LOG:'LOG' };
@@ -1048,7 +1068,7 @@ function buildFileName_(detail){
 /* === 키플레이어 이름 추출 (최대 20자) === */
 function extractKeyplayerName_(tableId, detail){
   const seatsOrder = participantsOrdered_(detail);
-  const rosterData = readRoster_();
+  const rosterData = getCachedRoster_();
   const rosterList = (rosterData.roster && rosterData.roster[tableId]) || [];
 
   // 키플레이어만 필터링
@@ -1202,7 +1222,7 @@ function buildHistoryBlock_(detail, bb){
 
 /* === 이름/명부 === */
 function nameShort_(tableId, seat){
-  const r = readRoster_().roster || {}; const arr = r[tableId]||[];
+  const r = getCachedRoster_().roster || {}; const arr = r[tableId]||[];
   const one = arr.find(x=>String(x.seat)===String(seat));
   if(!one || !one.player) return `S${seat}`;
   const parts = String(one.player).trim().split(/\s+/);
@@ -1211,7 +1231,7 @@ function nameShort_(tableId, seat){
   return `${(first[0]||'').toUpperCase()}-${last}`;
 }
 function nationOf_(tableId, seat){
-  const r = readRoster_().roster || {}; const arr = r[tableId]||[];
+  const r = getCachedRoster_().roster || {}; const arr = r[tableId]||[];
   const one = arr.find(x=>String(x.seat)===String(seat));
   return one? (one.nation||'') : '';
 }
@@ -1278,8 +1298,8 @@ function buildSubtitle_(detail, payload){
 
   if(selectedSeats.length === 0) return ''; // 선택된 플레이어 없음
 
-  // 🔧 FIX: readRoster_() 반환값 구조 수정 (.roster 1번만 접근)
-  const rosterData = readRoster_();
+  // v3.6.3: 캐시된 Roster 사용 (readRoster_ → getCachedRoster_)
+  const rosterData = getCachedRoster_();
   const rosterList = (rosterData.roster && rosterData.roster[tableId]) || [];
 
   // 🔧 v3.3.2: selectedSeats에 포함된 모든 플레이어 자막 생성 (keyplayer 무관)
