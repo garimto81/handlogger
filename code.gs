@@ -1534,15 +1534,10 @@ function buildSubtitle_(detail, payload){
 function extractTimeHHMM_(isoTime){
   if(!isoTime) return '';
   const d = new Date(isoTime);
-  // v3.8.0: UTC 시간을 KST(UTC+9)로 변환하여 HH:mm 추출
-  const utcHours = d.getUTCHours();
-  const utcMinutes = d.getUTCMinutes();
-
-  // UTC+9 (한국 시간) 변환
-  const kstHours = (utcHours + 9) % 24;
-
-  const hh = String(kstHours).padStart(2,'0');
-  const mm = String(utcMinutes).padStart(2,'0');
+  // v3.8.0: UTC 시간 직접 사용 (타임존 변환 제거)
+  // VIRTUAL 시트 B열은 PC 로컬 시간이므로 UTC 시간과 매칭
+  const hh = String(d.getUTCHours()).padStart(2,'0');
+  const mm = String(d.getUTCMinutes()).padStart(2,'0');
   return `${hh}:${mm}`;
 }
 

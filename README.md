@@ -23,25 +23,32 @@
   - 스마트 캐싱: 마지막 전송 위치 기억으로 51-73% 스캔 범위 축소
 
 ### Bug Fixes
+- 🐛 **시간 매칭 오류 수정 (Critical)**: KST(UTC+9) 변환 로직 제거, UTC 시간 직접 사용
+  - 이전: `2025-10-17T08:23:51.203Z` → `17:23` (KST) → 매칭 실패
+  - 수정: `2025-10-17T08:23:51.203Z` → `08:23` (UTC) → 매칭 성공
 - 🐛 **toInt_() 함수 호출 오류 수정**: Line 1067 `toInt()` → `toInt_()` (ReferenceError 해결)
 - 🔍 **디버그 출력 강화**: 서버 스캔 결과를 클라이언트 콘솔에 표시
 
 ### Technical Details
 ```javascript
+// UTC 시간 직접 추출 (code.gs:1534-1542)
+function extractTimeHHMM_(isoTime){
+  const d = new Date(isoTime);
+  const hh = String(d.getUTCHours()).padStart(2,'0');
+  const mm = String(d.getUTCMinutes()).padStart(2,'0');
+  return `${hh}:${mm}`; // "08:23" (UTC 시간)
+}
+
 // B열 직접 읽기 (code.gs:1087-1091)
 let cellHHMM = '';
 if(disp && typeof disp === 'string' && disp.includes(':')){
-  cellHHMM = disp.trim(); // "17:23" 직접 사용
+  cellHHMM = disp.trim(); // "08:23" 직접 사용
 }
 
 // 스마트 캐싱 (code.gs:1064-1067)
 const cache = PropertiesService.getScriptProperties();
-const cacheKey = 'virtual_last_row_' + sheetId;
 const lastSentRow = toInt_(cache.getProperty(cacheKey) || '0');
 const smartStart = Math.max(2, lastSentRow);
-
-// 성공 시 캐시 업데이트 (code.gs:1209-1211)
-cache.setProperty(cacheKey, String(pickRow));
 ```
 
 ### Performance
