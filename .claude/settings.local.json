@@ -9,7 +9,9 @@
       "Bash(git restore:*)",
       "Bash(git reset:*)",
       "Bash(python scripts/create_prd.py:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(start \"\" \"d:\\AI\\claude01\\handlogger\\docs\\screenshots\\hand-detail-mockup.html\")",
+      "Bash(python -c \"import webbrowser; webbrowser.open(''file:///d:/AI/claude01/handlogger/index.html'')\")"
     ],
     "deny": [],
     "ask": []

@@ -946,26 +946,48 @@ function updateExternalVirtual_(sheetId, detail, ext){
   const ss = SpreadsheetApp.openById(sheetId);
   const sh = ss.getSheetByName('VIRTUAL') || ss.getSheets()[0];
 
-  // 매칭 행(C열 Time) — 현재(KST) 이하 중 가장 최근(아래에서부터 검색)
-  const now = nowKST_();
+  // v3.8.0: 매칭 행(B열 핸드번호) — 역순 검색
   const last = sh.getLastRow(); if(last < 2) return {updated:false, reason:'no-rows'};
 
-  const rngVals = sh.getRange(2,3,last-1,1).getValues();          // 원시 값
-  const rngDisp = sh.getRange(2,3,last-1,1).getDisplayValues();   // 표시 값(서식 반영)
+  const rngVals = sh.getRange(2,2,last-1,1).getValues(); // B열 핸드번호
+  const targetHandNo = String(detail.head?.hand_no || '').trim();
+
+  // 🔍 DEBUG: 검색 대상 상세 분석
+  Logger.log('🔍 [EXT_VIRTUAL] 검색 시작 - targetHandNo: "' + targetHandNo + '" (type: ' + typeof targetHandNo + ', length: ' + targetHandNo.length + ')');
+  Logger.log('🔍 [EXT_VIRTUAL] detail.head.hand_no 원본: ' + JSON.stringify(detail.head?.hand_no) + ' (type: ' + typeof detail.head?.hand_no + ')');
+  Logger.log('🔍 [EXT_VIRTUAL] 스캔 범위: Row 2~' + last + ' (총 ' + (last-1) + '행)');
 
   let pickRow = -1;
+  const debugMatches = [];
   for(let i=rngVals.length-1;i>=0;i--){
-    const raw = rngVals[i][0];
-    const disp = rngDisp[i][0];
-    const t = parseTimeCellToTodayKST_(raw, disp);
-    if (t && t.getTime() <= now.getTime()){ pickRow = i+2; break; }
+    const rawCell = rngVals[i][0];
+    const cellHandNo = String(rawCell || '').trim();
+    const actualRow = i + 2;
+
+    debugMatches.push({
+      row: actualRow,
+      rawType: typeof rawCell,
+      rawValue: rawCell,
+      converted: cellHandNo,
+      matches: cellHandNo === targetHandNo
+    });
+
+    if (cellHandNo === targetHandNo){ pickRow = actualRow; break; }
   }
 
   if(pickRow<0){
-    log_('EXT_PICKROW','no-match-by-time');
-    return {updated:false, reason:'no-match-by-time'};
+    log_('EXT_PICKROW',`no-match: #${targetHandNo}`);
+    Logger.log('🔍 [EXT_VIRTUAL] 매칭 실패 - 스캔된 모든 행 (최근 10개):');
+    debugMatches.slice(0, 10).forEach(m => {
+      Logger.log(`  Row ${m.row}: #${m.converted} (원본타입:${m.rawType}, 원본값:${JSON.stringify(m.rawValue)}, 매칭:${m.matches})`);
+    });
+    Logger.log('🔍 [EXT_VIRTUAL] 가능한 원인:');
+    Logger.log('  1. targetHandNo 비어있음: ' + (targetHandNo === ''));
+    Logger.log('  2. B열에 해당 핸드번호 없음');
+    Logger.log('  3. 데이터 타입 불일치');
+    return {updated:false, reason:'no-match-by-handno'};
   }
-  log_('EXT_PICKROW', `row=${pickRow} now=${now.toISOString()}`);
+  log_('EXT_PICKROW', `row=${pickRow} handNo=${targetHandNo}`);
 
   // 값 구성
   const E = '미완료';
@@ -990,7 +1012,16 @@ function updateExternalVirtual_(sheetId, detail, ext){
 
 /* ===== Review 모드 VIRTUAL 전송 ===== */
 function sendHandToVirtual(hand_id, sheetId, payload){
-  if(!hand_id) throw new Error('hand_id required');
+  // v3.8.0: 파라미터 상세 검증
+  Logger.log('🔍 [DEBUG] sendHandToVirtual 호출됨');
+  Logger.log('  hand_id: ' + JSON.stringify(hand_id) + ' (type: ' + typeof hand_id + ')');
+  Logger.log('  sheetId: ' + JSON.stringify(sheetId) + ' (type: ' + typeof sheetId + ')');
+  Logger.log('  payload: ' + JSON.stringify(payload) + ' (type: ' + typeof payload + ')');
+
+  if(!hand_id || String(hand_id).trim() === ''){
+    Logger.log('❌ [ERROR] hand_id 비어있음 - hand_id: ' + hand_id);
+    throw new Error('hand_id required (received: ' + JSON.stringify(hand_id) + ')');
+  }
   if(!sheetId) throw new Error('sheetId required');
   if(!payload) throw new Error('payload required');
 
@@ -1015,9 +1046,9 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     perfTimer.steps.getHandDetail = Date.now() - t1;
 
     const head = detail.head;
-    const isoTime = head.started_at || nowKST_().toISOString();
-    const hhmmTime = extractTimeHHMM_(isoTime);
-    Logger.log('📋 [VIRTUAL] 핸드 상세: table_id=' + head.table_id + ' hand_no=' + head.hand_no + ' started_at=' + isoTime + ' hhmmTime=' + hhmmTime);
+    // v3.8.0: started_at은 클라이언트 PC 로컬 시간의 ISO 형식 (UTC 변환됨)
+    const isoTime = head.started_at || new Date().toISOString();
+    Logger.log('📋 [VIRTUAL] 핸드 상세: table_id=' + head.table_id + ' hand_no=' + head.hand_no + ' started_at=' + isoTime + ' (PC 로컬 시간 기준)');
 
     // 2. VIRTUAL 시트 열기
     const t2 = Date.now();
@@ -1034,17 +1065,22 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       return {success:false, reason:'no-rows'};
     }
 
-    // 3. C열 Time 매칭 - 역순 스캔 최적화 (최근 50행만 검색)
+    // 3. B열 핸드번호 매칭 - 역순 스캔 최적화 (최근 50행만 검색)
     const t3 = Date.now();
     const SCAN_WINDOW = 50; // 최근 50행만 스캔 (최신 핸드는 상단에 있을 확률 높음)
     const scanRows = Math.min(SCAN_WINDOW, last - 1);
     const startRow = Math.max(2, last - scanRows + 1);
 
-    const rngVals = sh.getRange(startRow, 3, scanRows, 1).getValues();
-    const rngDisp = sh.getRange(startRow, 3, scanRows, 1).getDisplayValues();
+    const rngVals = sh.getRange(startRow, 2, scanRows, 1).getValues(); // B열 핸드번호
     const rngE = sh.getRange(startRow, 5, scanRows, 1).getValues(); // E열 상태 확인
     perfTimer.steps.readColumns = Date.now() - t3;
-    Logger.log('🔍 [VIRTUAL] C열 Time 검색 중... (목표: ' + hhmmTime + ') - 스캔 범위: Row ' + startRow + '~' + last + ' (' + scanRows + '행)');
+
+    const targetHandNo = String(head.hand_no || '').trim();
+    Logger.log('🔍 [VIRTUAL] B열 핸드번호 검색 중... (목표: #' + targetHandNo + ') - 스캔 범위: Row ' + startRow + '~' + last + ' (' + scanRows + '행)');
+
+    // 🔍 DEBUG: 검색 대상 상세 분석
+    Logger.log('🔍 [DEBUG] targetHandNo - type: ' + typeof targetHandNo + ', value: "' + targetHandNo + '", length: ' + targetHandNo.length + ', isEmpty: ' + (targetHandNo === ''));
+    Logger.log('🔍 [DEBUG] head.hand_no 원본 - type: ' + typeof head.hand_no + ', value: ' + JSON.stringify(head.hand_no));
 
     let pickRow = -1;
     let debugInfo = [];
@@ -1052,16 +1088,24 @@ function sendHandToVirtual(hand_id, sheetId, payload){
 
     // 역순 스캔 (최신 → 과거)
     for(let i = rngVals.length - 1; i >= 0; i--){
-      const raw = rngVals[i][0];
-      const disp = rngDisp[i][0];
+      const rawCell = rngVals[i][0];
+      const cellHandNo = String(rawCell || '').trim();
       const eVal = rngE[i][0]; // E열 값
-      const cellTime = parseTimeCellToTodayKST_(raw, disp);
-      const cellHHMM = cellTime ? extractTimeHHMM_(cellTime.toISOString()) : '';
 
       const actualRow = startRow + i;
-      debugInfo.push(`Row ${actualRow}: ${cellHHMM} (E=${eVal})`);
 
-      if(cellHHMM === hhmmTime){
+      // 🔍 DEBUG: 각 행 상세 비교
+      const matchInfo = {
+        row: actualRow,
+        rawType: typeof rawCell,
+        rawValue: JSON.stringify(rawCell),
+        converted: cellHandNo,
+        matches: cellHandNo === targetHandNo,
+        eStatus: eVal
+      };
+      debugInfo.push(`Row ${actualRow}: #${cellHandNo} (원본타입:${typeof rawCell}, 매칭:${matchInfo.matches}, E=${eVal})`);
+
+      if(cellHandNo === targetHandNo){
         // E열이 이미 '미완료'면 스킵 (이미 처리된 행)
         if(eVal === '미완료'){
           log_('PUSH_VIRTUAL_SKIP', `row=${actualRow} already processed`, '');
@@ -1069,20 +1113,30 @@ function sendHandToVirtual(hand_id, sheetId, payload){
           continue;
         }
         pickRow = actualRow;
-        console.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (Time: ' + cellHHMM + ') - 역순 스캔으로 발견');
+        console.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (핸드번호: #' + cellHandNo + ') - 역순 스캔으로 발견');
         break;
       }
     }
     perfTimer.steps.scanRows = Date.now() - t4;
 
     if(pickRow < 0){
-      log_('PUSH_VIRTUAL_FAIL', `no-match: ${hhmmTime}`, '');
-      console.log('❌ [VIRTUAL] 실패: Time 매칭 없음 (목표: ' + hhmmTime + ')');
+      log_('PUSH_VIRTUAL_FAIL', `no-match: #${targetHandNo}`, '');
+      console.log('❌ [VIRTUAL] 실패: 핸드번호 매칭 없음 (목표: #' + targetHandNo + ')');
       console.log('🔍 [VIRTUAL] 검색된 행 개수:', debugInfo.length);
+
+      // 🔍 DEBUG: 실패 시 전체 디버그 정보 출력
+      Logger.log('🔍 [DEBUG] 매칭 실패 - 스캔된 모든 행 상세:');
+      debugInfo.forEach(info => Logger.log('  ' + info));
+      Logger.log('🔍 [DEBUG] 가능한 원인:');
+      Logger.log('  1. targetHandNo가 비어있음: ' + (targetHandNo === ''));
+      Logger.log('  2. B열에 해당 핸드번호 없음');
+      Logger.log('  3. 스캔 윈도우(50행) 부족 - 실제 스캔: ' + scanRows + '행, 범위: Row ' + startRow + '~' + last);
+      Logger.log('  4. 데이터 타입 불일치 (number vs string)');
+
       return {success:false, reason:'no-match'};
     }
 
-    log_('PUSH_VIRTUAL_ROW', `row=${pickRow} time=${hhmmTime}`, '');
+    log_('PUSH_VIRTUAL_ROW', `row=${pickRow} handNo=${targetHandNo}`, '');
 
     // 4. 값 구성 (최적화: 로깅 최소화)
     const t5 = Date.now();

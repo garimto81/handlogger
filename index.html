@@ -1,4 +1,4 @@
-<!-- index — Poker Hand Logger — v3.5.1 (2025-01-15) -->
+<!-- index — Poker Hand Logger — v3.8.0 (2025-01-17) -->
 <!doctype html>
 <html lang="ko">
 <head>
@@ -54,7 +54,8 @@ select,input,button{background:#0f1320;color:var(--text);border:1px solid #2a324
 .cb-h{border-color:#ef4444;color:#ef4444}
 .cb-d{border-color:#ef4444;color:#ef4444}
 .cb-c{border-color:#111111;color:#111111}
-.actBadge{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid;font-weight:600;font-size:0.75rem;white-space:nowrap}
+/* v3.8.0: 구버전 actBadge (Record 탭에서 사용) */
+.actBadge-legacy{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid;font-weight:600;font-size:0.75rem;white-space:nowrap}
 .act-chk{border-color:#22c55e;background:rgba(34,197,94,.1);color:#86efac}
 .act-call{border-color:#22c55e;background:rgba(34,197,94,.1);color:#86efac}
 .act-bet{border-color:#ef4444;background:rgba(239,68,68,.1);color:#fca5a5}
@@ -107,8 +108,10 @@ select#tableSel:has(option.keyplayer-option:checked) {
 #detail::-webkit-scrollbar-thumb{background:#2a3249;border-radius:4px}
 .seatCard.selected{border:2px solid var(--acc);background:rgba(42,111,255,.1)}
 
-/* === Review 상세 디자인 (v3.2.0: 극한 밀도) === */
-.potHeader{display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid var(--line);margin-bottom:2px;font-size:0.8rem}
+/* === Review 상세 디자인 (v3.8.0: Minimal 개선) === */
+.potHeader{padding:4px 0;border-bottom:1px solid var(--line);margin-bottom:6px;font-size:0.7rem}
+.potHeader-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.potHeader-bottom{display:flex;justify-content:space-between;font-size:0.65rem;color:#64748b}
 .boardSection{margin:4px 0}
 .playerSection{margin:4px 0}
 .playerRow{display:flex;gap:4px;padding:1px 0;align-items:center;font-size:0.7rem;flex-wrap:wrap}
@@ -121,10 +124,19 @@ select#tableSel:has(option.keyplayer-option:checked) {
 .cardBadgeSmall{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 4px;border-radius:4px;border:2px solid;background:#ffffff;font-size:0.7rem;font-weight:700}
 .boardSmall{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
 .detailMeta{font-size:0.7rem;color:var(--muted);margin:2px 0}
-.streetRow{margin:2px 0;font-size:0.75rem;line-height:1.8}
-.streetTitle{display:inline;cursor:pointer;font-weight:700;color:#94a3b8;margin-right:6px}
+.streetRow{margin:6px 0;font-size:0.7rem}
+.streetTitle{display:block;cursor:pointer;font-weight:700;color:#94a3b8;margin-bottom:4px;user-select:none;font-size:0.7rem}
 .streetTitle:hover{color:#a9b8ff}
-.streetBadges{display:inline}
+.streetBadges{display:flex;flex-direction:column;gap:3px}
+.actBadge{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border-radius:4px;border-left:3px solid;font-weight:600;font-size:0.7rem;background:rgba(15,19,32,0.4)}
+.actBadge.raise{border-color:#ef4444;background:rgba(239,68,68,0.08)}
+.actBadge.call{border-color:#22c55e;background:rgba(34,197,94,0.08)}
+.actBadge.fold{border-color:#3b82f6;background:rgba(59,130,246,0.05);opacity:0.6}
+.actBadge.check{border-color:#64748b;background:rgba(100,116,139,0.05);opacity:0.7}
+.actBadge .left{display:flex;gap:4px;align-items:center}
+.actBadge .name{font-weight:600;min-width:40px}
+.actBadge .action{font-size:0.65rem;opacity:0.7}
+.actBadge .amount{font-weight:700;font-size:0.75rem;color:#fbbf24}
 </style>
 </head>
 <body>
@@ -134,7 +146,7 @@ select#tableSel:has(option.keyplayer-option:checked) {
     <strong id="currentMode">Record</strong>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
-    <span class="muted small">v3.5.1</span>
+    <span class="muted small">v3.8.0</span>
     <button id="modeRecord" type="button" class="btnPrimary" style="padding:4px 12px;height:auto;font-size:0.7rem">Rec</button>
     <button id="modeReview" type="button" style="padding:4px 12px;height:auto;font-size:0.7rem">Rev</button>
   </div>
@@ -254,7 +266,7 @@ select#tableSel:has(option.keyplayer-option:checked) {
 </div></div>
 
 <script>
-/* ===== Poker Hand Logger — v3.3.0 (2025-01-15) ===== */
+/* ===== Poker Hand Logger — v3.8.0 (2025-01-17) ===== */
 const S={tables:[],roster:{},cfg:{},
   curTable:null,startStreetInit:'PREFLOP',curStreet:'PREFLOP',
   btnSeat:null,seats:[],activeSeatMap:{},prePot:0,actions:[],nextSeq:1,board:[],
@@ -1115,7 +1127,16 @@ function commitHand(){
 function sendCurrentHandToVirtual(){
   saveVirtualSettings_();
   if(!S.virtualSheetId){ alert('VIRTUAL 시트 ID를 먼저 설정하세요'); return; }
-  if(!reviewState.selectedId){ alert('핸드가 선택되지 않았습니다'); return; }
+
+  // v3.8.0: hand_id 검증 강화
+  const handId = reviewState.selectedId;
+  console.log('[DEBUG] sendCurrentHandToVirtual - reviewState.selectedId:', handId, 'type:', typeof handId);
+
+  if(!handId || String(handId).trim() === ''){
+    alert('핸드가 선택되지 않았습니다.\n\nReview 리스트에서 핸드를 먼저 선택하세요.');
+    console.error('[ERROR] hand_id 없음 - reviewState:', reviewState);
+    return;
+  }
 
   // v3.6.3: 중복 전송 방지
   if(S.sentHandIds.has(reviewState.selectedId)){
@@ -1354,18 +1375,26 @@ function groupByStreet(acts){
 }
 function formatStreetSection(title,arr,tableId,idx){
   if(!arr||!arr.length) return '';
+  // v3.8.0: Minimal 디자인 - 좌측 컬러바 + 금액 우측 고정
   const badges=arr.map(a=>{
     const fullName=getSeatNameByTable(tableId,a.seat);
     const name=seatNameOnly(a.seat,fullName);
-    const amt=a.amount_input?` ${formatCompact(toInt(a.amount_input))}`:'';
+    const amt=toInt(a.amount_input||0);
     const k=(a.action||'').toUpperCase();
-    const cl=k==='CHECK'?'act-chk':k==='CALL'?'act-call':k==='BET'?'act-bet':k==='RAISE'?'act-raise':k==='ALLIN'?'act-allin':'act-fold';
-    return `<span class="actBadge ${cl}">${name} ${a.action}${amt}</span>`;
+    const actionClass=k==='CHECK'?'check':(k==='CALL'?'call':((k==='BET'||k==='RAISE'||k==='ALLIN')?'raise':'fold'));
+    const amtDisplay=amt>0?`<div class="amount">${formatCompact(amt)}</div>`:'';
+    return `<div class="actBadge ${actionClass}">
+      <div class="left">
+        <span class="name">${name}</span>
+        <span class="action">${a.action||''}</span>
+      </div>
+      ${amtDisplay}
+    </div>`;
   }).join('');
   const collapseId=`street_${idx}`;
   return `<div class="streetRow">
     <span class="streetTitle" onclick="toggleStreet('${collapseId}')">▼ ${title}(${arr.length})</span>
-    <span id="${collapseId}" class="streetBadges">${badges}</span>
+    <div id="${collapseId}" class="streetBadges">${badges}</div>
   </div>`;
 }
 /* === Review 상세 렌더링 헬퍼 (v3.1.0) === */
@@ -1419,9 +1448,23 @@ function renderPotHeader(head,acts){
   const bb=toInt(localStorage.getItem('phl_bbSize')||0);
   const handIdShort=(head.hand_id||'').slice(0,8)+'...';
   const bbInfo=bb>0?` BB${formatCompact(bb)}`:'';
+
+  // v3.8.0: 선누적팟 + 시작스트릿 추가
+  const prePot=toInt(head.pre_pot||0);
+  const prePotInfo=prePot>0?` · PRE:+${formatCompact(prePot)}`:'';
+  const startStreet=(head.start_street||'').toUpperCase();
+  const startInfo=startStreet&&startStreet!=='PREFLOP'?`START:${startStreet}`:'';
+  const metaInfo=startInfo+prePotInfo;
+
   return `<div class="potHeader">
-    <div><b>#${head.hand_no||'-'}</b> T${head.table_id||'-'} BTN${head.btn_seat||'-'}${bbInfo} <span style="color:#64748b">${handIdShort}</span></div>
-    <div><b>${formatPotWithBB(pot,bb)}</b></div>
+    <div class="potHeader-top">
+      <div><b>#${head.hand_no||'-'}</b> T${head.table_id||'-'} BTN${head.btn_seat||'-'}${bbInfo}</div>
+      <div><b>${formatPotWithBB(pot,bb)}</b></div>
+    </div>
+    ${metaInfo?`<div class="potHeader-bottom">
+      <span style="color:#64748b;font-size:0.65rem">${metaInfo}</span>
+      <span style="color:#64748b;font-size:0.65rem">${handIdShort}</span>
+    </div>`:`<div class="potHeader-bottom"><span style="color:#64748b;font-size:0.65rem">${handIdShort}</span></div>`}
   </div>`;
 }
 

@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.7.1
+# Poker Hand Logger v3.8.0
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,41 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🐛 v3.8.0 (2025-01-17) - Debug & Review UX
+
+### Bug Fixes
+- 🔍 **VIRTUAL no-match 디버깅 강화**: B열 핸드번호 스캔 실패 원인 추적
+  - `hand_id` 파라미터 검증 강화 (클라이언트 + 서버)
+  - 스캔된 모든 행의 상세 정보 로깅 (원본 타입, 변환 값, 매칭 여부)
+  - 4가지 실패 원인 자동 분석 (빈 값, 데이터 없음, 스캔 범위, 타입 불일치)
+- 🎨 **Review 상세 UI 개선**: 선누적팟(pre_pot) + 시작스트릿(start_street) 표시
+  - 2줄 압축 헤더: 핵심 정보 + 메타 정보 분리
+  - 좌측 컬러바 액션 배지 (Minimal 디자인)
+  - 금액 우측 고정 + 축약 포맷 (1.2k, 3.5M)
+
+### Technical Details
+```javascript
+// 클라이언트 검증 (index.html:1131-1139)
+const handId = reviewState.selectedId;
+console.log('[DEBUG] hand_id:', handId, 'type:', typeof handId);
+if(!handId || String(handId).trim() === ''){
+  alert('핸드가 선택되지 않았습니다');
+  return;
+}
+
+// 서버 상세 로깅 (code.gs:1047-1072)
+Logger.log('targetHandNo: "' + targetHandNo + '" (type: ' + typeof targetHandNo + ')');
+debugInfo.forEach(info => Logger.log('  ' + info));
+Logger.log('가능한 원인: 1. 빈 값, 2. 데이터 없음, 3. 스캔 범위, 4. 타입 불일치');
+```
+
+### UI Changes
+- **Review 헤더**: `#123 T1 BTN3 BB1k | 45.2k(45.2BB)` → `START:FLOP · PRE:+12.5k`
+- **액션 배지**: 좌측 컬러바 (빨강=레이즈, 초록=콜, 파랑=폴드, 회색=체크)
+- **금액 표시**: 우측 고정, 노란색, 축약 포맷
 
 ---
 

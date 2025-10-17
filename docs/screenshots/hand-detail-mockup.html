@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>핸드 디테일 (Minimal Design)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0e1a;
+      color: #e7eaf0;
+      padding: 20px;
+      line-height: 1.4;
+    }
+    .container {
+      max-width: 400px;
+      margin: 0 auto;
+      background: #131825;
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid #1e293b;
+    }
+
+    /* === 핸드 헤더 (Minimal: 2줄 압축) === */
+    .potHeader {
+      padding: 4px 0;
+      border-bottom: 1px solid #2a3249;
+      margin-bottom: 6px;
+      font-size: 0.7rem;
+    }
+    .potHeader-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .potHeader-left {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      color: #94a3b8;
+    }
+    .potHeader-left b { color: #e7eaf0; font-size: 0.8rem; }
+    .potHeader-right {
+      font-weight: 700;
+      color: #fbbf24;
+      font-size: 0.85rem;
+    }
+    .potHeader-bottom {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      color: #64748b;
+    }
+
+    /* === 보드 카드 === */
+    .boardSection {
+      margin: 6px 0;
+      display: flex;
+      gap: 2px;
+    }
+    .cardBadge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      padding: 0 4px;
+      border-radius: 4px;
+      border: 2px solid;
+      background: #ffffff;
+      font-weight: 700;
+      font-size: 0.7rem;
+    }
+    .cb-s { border-color: #111; color: #111; }
+    .cb-h { border-color: #ef4444; color: #ef4444; }
+    .cb-d { border-color: #ef4444; color: #ef4444; }
+    .cb-c { border-color: #111; color: #111; }
+
+    /* === 플레이어 (극한 압축) === */
+    .playerSection {
+      margin: 6px 0;
+      font-size: 0.7rem;
+    }
+    .playerRow {
+      display: flex;
+      gap: 4px;
+      padding: 3px 0;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+    }
+    .playerRow:last-child { border-bottom: none; }
+    .playerSeat {
+      font-weight: 700;
+      min-width: 24px;
+      color: #64748b;
+      font-size: 0.65rem;
+    }
+    .playerName {
+      font-weight: 600;
+      min-width: 50px;
+      font-size: 0.7rem;
+    }
+    .playerHole {
+      display: flex;
+      gap: 2px;
+    }
+    .cardBadgeSmall {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+      padding: 0 3px;
+      border-radius: 3px;
+      border: 1.5px solid;
+      background: #ffffff;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+    .playerStack {
+      margin-left: auto;
+      font-weight: 600;
+      color: #94a3b8;
+      font-size: 0.7rem;
+    }
+
+    /* === 구분선 === */
+    .sectionDivider {
+      height: 1px;
+      background: #2a3249;
+      margin: 8px 0;
+    }
+
+    /* === 스트릿 액션 (Minimal) === */
+    .streetRow {
+      margin: 6px 0;
+      font-size: 0.7rem;
+    }
+    .streetTitle {
+      display: block;
+      cursor: pointer;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-bottom: 4px;
+      user-select: none;
+      font-size: 0.7rem;
+    }
+    .streetTitle:hover { color: #a9b8ff; }
+    .streetBadges {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    /* Minimal 액션 배지: 금액 강조 */
+    .actBadge {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border-left: 3px solid;
+      font-weight: 600;
+      font-size: 0.7rem;
+      background: rgba(15, 19, 32, 0.4);
+    }
+    .actBadge.raise {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.08);
+    }
+    .actBadge.call {
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.08);
+    }
+    .actBadge.fold {
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.05);
+      opacity: 0.6;
+    }
+    .actBadge.check {
+      border-color: #64748b;
+      background: rgba(100, 116, 139, 0.05);
+      opacity: 0.7;
+    }
+    .actBadge .left {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .actBadge .name {
+      font-weight: 600;
+      min-width: 40px;
+    }
+    .actBadge .action {
+      font-size: 0.65rem;
+      opacity: 0.7;
+    }
+    .actBadge .amount {
+      font-weight: 700;
+      font-size: 0.75rem;
+      color: #fbbf24;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 핸드 헤더 (실제 데이터 구조) -->
+    <div class="potHeader">
+      <div class="potHeader-top">
+        <div class="potHeader-left">
+          <b>#47</b>
+          <span>T1</span>
+          <span>BTN3</span>
+          <span>BB200</span>
+        </div>
+        <div class="potHeader-right">1.8k</div>
+      </div>
+      <div class="potHeader-bottom">
+        <span>START: FLOP · PRE: +600</span>
+        <span>d3a8f2e1...</span>
+      </div>
+    </div>
+
+    <!-- 보드 카드 -->
+    <div class="boardSection">
+      <span class="cardBadge cb-h">A♥</span>
+      <span class="cardBadge cb-s">K♠</span>
+      <span class="cardBadge cb-d">7♦</span>
+    </div>
+
+    <!-- 플레이어 -->
+    <div class="playerSection">
+      <div class="playerRow">
+        <span class="playerSeat">⭐1</span>
+        <span class="playerName">Alice</span>
+        <div class="playerHole">
+          <span class="cardBadgeSmall cb-s">A♠</span>
+          <span class="cardBadgeSmall cb-h">K♥</span>
+        </div>
+        <span class="playerStack">12.5k</span>
+      </div>
+      <div class="playerRow">
+        <span class="playerSeat">3</span>
+        <span class="playerName">Bob</span>
+        <div class="playerHole">
+          <span class="cardBadgeSmall cb-d">Q♦</span>
+          <span class="cardBadgeSmall cb-c">Q♣</span>
+        </div>
+        <span class="playerStack">8.3k</span>
+      </div>
+      <div class="playerRow">
+        <span class="playerSeat">5</span>
+        <span class="playerName">Charlie</span>
+        <div class="playerHole">
+          <span class="cardBadgeSmall cb-c">9♣</span>
+          <span class="cardBadgeSmall cb-h">8♥</span>
+        </div>
+        <span class="playerStack">6.2k</span>
+      </div>
+    </div>
+
+    <div class="sectionDivider"></div>
+
+    <!-- FLOP 액션 -->
+    <div class="streetRow">
+      <div class="streetTitle">▼ FLOP (3)</div>
+      <div class="streetBadges">
+        <div class="actBadge check">
+          <div class="left">
+            <span class="name">Alice</span>
+            <span class="action">CHECK</span>
+          </div>
+        </div>
+        <div class="actBadge raise">
+          <div class="left">
+            <span class="name">Bob</span>
+            <span class="action">BET</span>
+          </div>
+          <div class="amount">400</div>
+        </div>
+        <div class="actBadge fold">
+          <div class="left">
+            <span class="name">Charlie</span>
+            <span class="action">FOLD</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TURN 액션 -->
+    <div class="streetRow">
+      <div class="streetTitle">▼ TURN (2)</div>
+      <div class="streetBadges">
+        <div class="actBadge raise">
+          <div class="left">
+            <span class="name">Alice</span>
+            <span class="action">RAISE</span>
+          </div>
+          <div class="amount">800</div>
+        </div>
+        <div class="actBadge call">
+          <div class="left">
+            <span class="name">Bob</span>
+            <span class="action">CALL</span>
+          </div>
+          <div class="amount">800</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:16px; color:#64748b; font-size:0.7rem">
+    HandLogger v3.8.0 - Minimal Review Design
+  </div>
+</body>
+</html>
