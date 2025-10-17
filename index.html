@@ -1094,16 +1094,8 @@ function commitHand(){
   const manualHandNo = handNoInput.value ? toInt(handNoInput.value) : 0;
   const handNo = manualHandNo > 0 ? manualHandNo : S.nextHandNo;
 
-  // v3.8.0: 로컬 시간을 ISO 형식으로 저장 (UTC 변환 방지)
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  const ms = String(now.getMilliseconds()).padStart(3, '0');
-  const localISO = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}Z`;
+  // v3.8.0: UTC 시간으로 저장 (서버와 일관성 유지)
+  const localISO = new Date().toISOString();
 
   const payload={
     client_uuid: uuid(),
