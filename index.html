@@ -226,9 +226,18 @@ select#tableSel:has(option.keyplayer-option:checked) {
   </div>
 
   <div class="panel hidden" id="panelReview">
-    <h3>Review</h3>
-    <!-- v3.0.0: VIRTUAL 시트 설정 UI (간소화 - 전송 기능은 핸드 상세에서) -->
-    <div class="panel" style="background:#0e1322; margin-bottom:10px">
+    <!-- v3.8.0: 1줄 압축 헤더 (설정 버튼 + 새로고침 + 정보) -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
+      <h3 style="margin:0">Review</h3>
+      <div style="display:flex;align-items:center;gap:8px;flex:1">
+        <button id="settingsBtn" type="button" style="padding:4px 10px;height:auto;font-size:0.7rem">⚙️ 설정</button>
+        <button id="refreshList" type="button" style="padding:4px 10px;height:auto;font-size:0.7rem">🔄</button>
+        <span id="listInfo" class="small muted" style="margin-left:auto"></span>
+      </div>
+    </div>
+
+    <!-- v3.8.0: VIRTUAL 설정 모달 (접기/펼치기) -->
+    <div id="settingsPanel" class="panel" style="background:#0e1322;margin-bottom:10px;display:none">
       <div class="row settings small">
         <label>VIRTUAL Sheet ID</label>
         <input id="virtualSheetId" type="text" placeholder="예: 13LpVWYH... (VIRTUAL 시트 소속 스프레드시트 ID)"/>
@@ -236,10 +245,7 @@ select#tableSel:has(option.keyplayer-option:checked) {
       </div>
       <div class="small muted" id="virtualMsg"></div>
     </div>
-    <div class="row">
-      <button id="refreshList" type="button">새로고침</button>
-      <span id="listInfo" class="small muted"></span>
-    </div>
+
     <div id="reviewContainer">
       <div id="list"></div>
       <div id="detail" class="small"></div>
@@ -247,8 +253,8 @@ select#tableSel:has(option.keyplayer-option:checked) {
   </div>
 </div>
 
-<footer>
-  <!-- v3.3.2: Sticky Footer (항상 최하단) -->
+<footer id="recordFooter">
+  <!-- v3.8.0: Record 탭 전용 Footer (Review 탭에서는 숨김) -->
   <div style="display:flex;gap:6px;margin-bottom:4px">
     <button id="undoBtn" type="button" style="flex:1;padding:8px;height:44px;font-size:0.75rem">← Undo</button>
     <button id="newHandBtn" type="button" style="flex:1;padding:8px;height:44px;font-size:0.75rem">🔄 새 핸드</button>
@@ -545,6 +551,14 @@ function initFromConfig(data){
   document.getElementById('saveVirtualBtn').onclick=saveVirtualSettings_;
   document.getElementById('virtualMsg').textContent= S.virtualSheetId ? `VIRTUAL 시트 저장됨` : 'VIRTUAL 시트ID를 설정하세요';
 
+  // v3.8.0: 설정 버튼 클릭 시 설정 패널 토글
+  document.getElementById('settingsBtn').onclick = () => {
+    const panel = document.getElementById('settingsPanel');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    vibrate(HAPTIC.LIGHT);
+  };
+
   updateLoading(1, 39, `테이블 드롭다운 (${S.tables.length}개)`);
 
   // v3.3.2: 데이터 로딩 검증
@@ -697,11 +711,15 @@ function saveVirtualSettings_(){
 function setMode(m){
   const rec=document.getElementById('panelRecord'), rev=document.getElementById('panelReview');
   const bR=document.getElementById('modeRecord'), bV=document.getElementById('modeReview');
+  const footer=document.getElementById('recordFooter'); // v3.8.0: Footer 참조
+
   if(m==='record'){
     rec.classList.remove('hidden'); rev.classList.add('hidden'); bR.classList.add('btnPrimary'); bV.classList.remove('btnPrimary');
+    footer.style.display='block'; // v3.8.0: Record 탭에서 Footer 표시
   }
   else{
     rev.classList.remove('hidden'); rec.classList.add('hidden'); bV.classList.add('btnPrimary'); bR.classList.remove('btnPrimary');
+    footer.style.display='none'; // v3.8.0: Review 탭에서 Footer 숨김
     // v3.3.2: 첫 Review 모드 전환 시에만 리스트 로드
     if(!reviewState.loaded){
       console.log('[LAZY] Review 리스트 첫 전환 시 로딩');
@@ -1076,13 +1094,24 @@ function commitHand(){
   const manualHandNo = handNoInput.value ? toInt(handNoInput.value) : 0;
   const handNo = manualHandNo > 0 ? manualHandNo : S.nextHandNo;
 
+  // v3.8.0: 로컬 시간을 ISO 형식으로 저장 (UTC 변환 방지)
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const ms = String(now.getMilliseconds()).padStart(3, '0');
+  const localISO = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}Z`;
+
   const payload={
     client_uuid: uuid(),
     event_id:'',
     table_id:S.curTable||'',
     hand_no: handNo,
     start_street:S.startStreetInit,
-    started_at:new Date().toISOString(),
+    started_at:localISO,
     ended_at:'',
     btn_seat:S.btnSeat||'',
     board:getBoardObjectForSave(),
@@ -1212,10 +1241,38 @@ function sendCurrentHandToVirtual(){
           selectedCard.dataset.sent = 'true';
         }
       }else{
-        console.log('전송 실패 - res:', res);
+        // v3.8.0: 실패 응답 상세 로깅
+        console.error('❌ [VIRTUAL] 전송 실패');
+        console.error('  res 전체:', JSON.stringify(res, null, 2));
+        console.error('  res.success:', res?.success);
+        console.error('  res.reason:', res?.reason);
+        console.error('  res.row:', res?.row);
+
+        // 🔍 디버깅: B열 스캔 결과 출력
+        if(res?.debug){
+          console.error('🔍 [DEBUG] B열 매칭 실패 상세:');
+          console.error('  찾으려는 시간:', res.debug.target);
+          console.error('  스캔된 행들 (최근 20개):');
+          (res.debug.scanned || []).forEach((info, idx) => {
+            console.error(`    ${idx + 1}. ${info}`);
+          });
+        }
+
         btn.textContent = '📤 VIRTUAL 전송';
-        msg.textContent = `❌ 전송 실패: ${res.reason||'알 수 없는 오류'}`;
+
+        // 상세 에러 메시지 구성
+        let errorMsg = '전송 실패';
+        if(res?.reason === 'no-match'){
+          errorMsg = '❌ 매칭 실패: VIRTUAL 시트 B열에서 핸드번호를 찾을 수 없습니다.\n\n→ Apps Script 로그를 확인하세요 (실행 > 로그)';
+        }else if(res?.reason){
+          errorMsg = `❌ 전송 실패: ${res.reason}`;
+        }else{
+          errorMsg = `❌ 전송 실패: 알 수 없는 오류 (응답: ${JSON.stringify(res)})`;
+        }
+
+        msg.textContent = errorMsg;
         msg.style.color = '#ef4444';
+        alert(errorMsg); // 사용자에게 명확한 피드백
       }
 
       setTimeout(()=>{msg.textContent=''; msg.style.color='';}, 5000);
