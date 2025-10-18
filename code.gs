@@ -1102,10 +1102,8 @@ function sendHandToVirtual(hand_id, sheetId, payload){
 
       const actualRow = startRow + i;
 
-      // 디버그 정보는 처음 20개 + 마지막 20개만 저장 (메모리 절약)
-      if(i < 20 || i >= rngVals.length - 20){
-        debugInfo.push(`Row ${actualRow}: "${cellHHMM}" raw=${raw} disp="${disp}" (E=${eVal})`);
-      }
+      // v3.9.6: 디버그 정보 전체 저장 (매칭 실패 시 전체 범위 확인 필요)
+      debugInfo.push(`Row ${actualRow}: "${cellHHMM}" raw=${raw} disp="${disp}" (E=${eVal})`);
 
       if(cellHHMM === hhmmTime){
         // v3.9.5: E열 상태 무시 - 시간 매칭되면 무조건 덮어쓰기
@@ -1123,13 +1121,14 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       Logger.log('🔍 [VIRTUAL] 검색된 행들 (최근 10개):');
       debugInfo.slice(0, 10).forEach(info => Logger.log('  ' + info));
 
-      // 클라이언트 디버깅용: debugInfo를 응답에 포함
+      // v3.9.6: 전체 디버그 정보 반환 (매칭 실패 원인 파악)
       return {
         success: false,
         reason: `no-match: ${hhmmTime}`,
         debug: {
           target: hhmmTime,
-          scanned: debugInfo.slice(0, 20) // 최근 20개 행 정보
+          totalScanned: debugInfo.length,
+          scanned: debugInfo // 전체 행 정보 (최대 1440개 - 00:00~23:59)
         }
       };
     }

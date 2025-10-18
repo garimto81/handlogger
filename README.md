@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.5
+# Poker Hand Logger v3.9.6
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,37 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.9.6 (2025-01-18) - VIRTUAL 디버깅 강화 (Debugging)
+
+### Debugging Enhancements
+- 🔍 **전체 스캔 범위 디버깅**: 매칭 실패 시 VIRTUAL 시트 전체 행 정보 반환
+  - **Before**: 처음 20개 행만 표시 → 16:22 행 존재 여부 확인 불가
+  - **After**: 전체 행 정보 표시 (최대 1440개 - 00:00~23:59)
+  - **용도**: 시간 매칭 실패 원인 파악 (VIRTUAL 시트에 해당 시간 행이 없는지 확인)
+
+### Debug Output Example
+```javascript
+{
+  "success": false,
+  "reason": "no-match: 16:22",
+  "debug": {
+    "target": "16:22",
+    "totalScanned": 1440,
+    "scanned": [
+      "Row 2: \"13:00\" ...",
+      "Row 3: \"13:01\" ...",
+      // ... 전체 행 (16:22 존재 여부 확인 가능)
+    ]
+  }
+}
+```
+
+### Impact
+- ✅ **매칭 실패 원인 파악**: VIRTUAL 시트 전체 시간 범위 확인 가능
+- ✅ **시트 구조 검증**: B열이 00:00~23:59 전체를 커버하는지 확인
 
 ---
 
