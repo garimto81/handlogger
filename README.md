@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.6
+# Poker Hand Logger v3.9.7
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,43 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.9.7 (2025-01-18) - VIRTUAL 시간 매칭 수정 (Critical Fix)
+
+### Bug Fixes
+- 🐛 **시간 매칭 로직 수정 (Critical)**: UTC → 로컬 시간 변경
+  - **문제**: `extractTimeHHMM_()`이 UTC 시간 사용 → VIRTUAL B열(로컬 시간)과 불일치
+  - **증상**: `16:22` 핸드가 VIRTUAL 시트에서 매칭 안됨 (UTC와 로컬 시간 9시간 차이)
+  - **해결**: `getUTCHours()` → `getHours()` (로컬 시간 사용)
+
+### Technical Details
+```javascript
+// Before (v3.8.0-v3.9.6) - UTC 시간
+const hh = String(d.getUTCHours()).padStart(2,'0');  // ❌
+const mm = String(d.getUTCMinutes()).padStart(2,'0');
+
+// After (v3.9.7) - 로컬 시간
+const hh = String(d.getHours()).padStart(2,'0');  // ✅
+const mm = String(d.getMinutes()).padStart(2,'0');
+```
+
+### Example
+```
+클라이언트 PC 시간: 2025-01-18 16:22 (KST)
+started_at: 2025-01-18T16:22:00.000Z (ISO)
+
+Before (v3.9.6):
+  extractTimeHHMM_() → "07:22" (UTC) ❌ VIRTUAL B열 불일치
+
+After (v3.9.7):
+  extractTimeHHMM_() → "16:22" (로컬) ✅ VIRTUAL B열 매칭
+```
+
+### Impact
+- ✅ **시간 매칭 성공**: VIRTUAL 시트 B열과 정확히 매칭
+- ✅ **타임존 무관**: PC 로컬 시간 기준으로 일관성 유지
 
 ---
 

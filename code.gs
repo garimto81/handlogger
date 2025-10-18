@@ -1555,10 +1555,11 @@ function buildSubtitle_(detail, payload){
 function extractTimeHHMM_(isoTime){
   if(!isoTime) return '';
   const d = new Date(isoTime);
-  // v3.8.0: UTC 시간 직접 사용 (타임존 변환 제거)
-  // VIRTUAL 시트 B열은 PC 로컬 시간이므로 UTC 시간과 매칭
-  const hh = String(d.getUTCHours()).padStart(2,'0');
-  const mm = String(d.getUTCMinutes()).padStart(2,'0');
+  // v3.9.7: 로컬 시간 사용 (VIRTUAL 시트 B열은 PC 로컬 시간)
+  // started_at은 클라이언트 PC 로컬 시간을 ISO로 변환한 값이므로
+  // getHours()/getMinutes()로 로컬 시간 추출 (타임존 무관)
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
   return `${hh}:${mm}`;
 }
 
