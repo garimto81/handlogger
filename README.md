@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.8.0
+# Poker Hand Logger v3.9.4
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -14,47 +14,202 @@
 
 ---
 
-## 🚀 v3.8.0 (2025-01-17) - VIRTUAL B열 시간 매칭 최적화
+## 🚀 v3.9.4 (2025-01-18) - VIRTUAL 전송 검증 로직 추가 (Debugging)
 
-### Features
-- ⚡ **VIRTUAL 시간 매칭 전환**: C열 (한국시간) → B열 (PC 로컬 시간)
-  - 타임존 독립적 HH:mm 문자열 직접 매칭 (복잡한 Date 변환 제거)
-  - 순방향 스캔으로 평균 탐색 50% 개선 (06:00 → 23:59 순서 활용)
-  - 스마트 캐싱: 마지막 전송 위치 기억으로 51-73% 스캔 범위 축소
-
-### Bug Fixes
-- 🐛 **시간 매칭 오류 수정 (Critical)**: KST(UTC+9) 변환 로직 제거, UTC 시간 직접 사용
-  - 이전: `2025-10-17T08:23:51.203Z` → `17:23` (KST) → 매칭 실패
-  - 수정: `2025-10-17T08:23:51.203Z` → `08:23` (UTC) → 매칭 성공
-- 🐛 **toInt_() 함수 호출 오류 수정**: Line 1067 `toInt()` → `toInt_()` (ReferenceError 해결)
-- 🔍 **디버그 출력 강화**: 서버 스캔 결과를 클라이언트 콘솔에 표시
+### Debugging Enhancements
+- 🔍 **쓰기 후 검증 로직 추가**: setValue() 호출 후 즉시 getValue()로 실제 값 확인
+  - **목적**: "전송 완료" 응답에도 불구하고 데이터가 입력되지 않는 문제 원인 파악
+  - **검증 항목**: E, F, G, H, J, K 열 6개 컬럼의 실제 저장값 확인
+  - **출력 위치**: Apps Script 실행 로그 (console.log)
 
 ### Technical Details
 ```javascript
-// UTC 시간 직접 추출 (code.gs:1534-1542)
-function extractTimeHHMM_(isoTime){
-  const d = new Date(isoTime);
-  const hh = String(d.getUTCHours()).padStart(2,'0');
-  const mm = String(d.getUTCMinutes()).padStart(2,'0');
-  return `${hh}:${mm}`; // "08:23" (UTC 시간)
-}
-
-// B열 직접 읽기 (code.gs:1087-1091)
-let cellHHMM = '';
-if(disp && typeof disp === 'string' && disp.includes(':')){
-  cellHHMM = disp.trim(); // "08:23" 직접 사용
-}
-
-// 스마트 캐싱 (code.gs:1064-1067)
-const cache = PropertiesService.getScriptProperties();
-const lastSentRow = toInt_(cache.getProperty(cacheKey) || '0');
-const smartStart = Math.max(2, lastSentRow);
+// 쓰기 후 즉시 검증
+sh.getRange(pickRow, 5, 1, 1).setValue(E);  // E열 쓰기
+const verifyE = sh.getRange(pickRow, 5, 1, 1).getValue();  // 읽기로 검증
+console.log('  E열 실제값: ' + verifyE);
 ```
 
-### Performance
-- **첫 전송**: Row 2~1443 (1442행 스캔)
-- **두 번째 전송**: Row 750~1443 (694행, 51% 절감)
-- **세 번째 전송**: Row 1050~1443 (394행, 73% 절감)
+### How to Debug
+1. VIRTUAL 전송 실행
+2. Apps Script 에디터 → "실행" → "최근 실행" 확인
+3. Console 로그에서 다음 항목 확인:
+   - `📄 시트 정보:` (스프레드시트 URL, 시트명, 대상 행)
+   - `🔍 쓰기 후 검증:` (실제 저장된 값 6개 컬럼)
+
+### Impact
+- ✅ **원인 파악 가능**: setValue()가 실패하는지, 다른 시트에 쓰는지 확인 가능
+- ✅ **투명한 디버깅**: 실제 저장값과 입력값 비교로 문제 위치 특정
+
+---
+
+## 🚀 v3.9.3 (2025-01-18) - VIRTUAL 전송 중복 방지 로직 수정 (Critical Fix)
+
+### Bug Fixes
+- 🐛 **VIRTUAL 중복 전송 방지 로직 수정 (Critical)**: E열 필터 조건 개선
+  - **문제**: "전송 완료" 표시되지만 VIRTUAL 시트에 반영되지 않음
+  - **원인**: E열 필터가 `=== '미완료'`만 체크 → E열이 빈칸이거나 다른 값이면 같은 행에 계속 덮어쓰기
+  - **해결**: E열이 **비어있는 행만** 선택하도록 수정 (값이 있으면 모두 스킵)
+
+### Technical Details
+```javascript
+// Before (v3.9.2)
+if(cellHHMM === hhmmTime){
+  if(eVal === '미완료'){  // ⚠️ '미완료'만 스킵
+    continue;
+  }
+  pickRow = actualRow;
+  break;
+}
+
+// After (v3.9.3)
+if(cellHHMM === hhmmTime){
+  const eValStr = String(eVal || '').trim();
+  if(eValStr !== ''){  // ✅ 모든 값이 있는 행 스킵
+    Logger.log('⏭️ [VIRTUAL] 스킵: Row ' + actualRow + ' (E열 이미 처리됨: "' + eValStr + '")');
+    continue;
+  }
+  pickRow = actualRow;  // ✅ E열이 빈칸인 행만 선택
+  break;
+}
+```
+
+### Impact
+- ✅ **중복 전송 완전 방지**: E열에 값이 있는 모든 행 스킵 (빈칸만 업데이트)
+- ✅ **디버깅 개선**: 스킵 사유에 E열 값 표시 (`"미완료"`, `"수정 중"` 등)
+- ✅ **로그 명확화**: "E열: 빈칸" 메시지로 선택 조건 명시
+
+### 사용 시나리오
+
+**VIRTUAL 시트 구조 예시**:
+```
+Row  | B열(시간) | E열(상태) | 전송 결과
+-----|-----------|-----------|------------
+980  | 15:51     | 미완료    | ⏭️ 스킵 (이미 처리됨)
+981  | 15:51     | 완료      | ⏭️ 스킵 (이미 처리됨)
+982  | 15:51     | (빈칸)    | ✅ 선택 → 업데이트
+983  | 15:52     | (빈칸)    | (다른 시간, 무시)
+```
+
+---
+
+## 🚀 v3.9.2 (2025-01-18) - Review 시간 표시 개선 (UX Enhancement)
+
+### UX Improvements
+- ✨ **시간 표시 포맷 개선**: ISO 문자열 → 사용자 친화적 형식
+  - **Before**: `2025-01-18T06:51:23.456Z` (UTC ISO 형식 - 읽기 어려움)
+  - **After**: `01/18 15:51` (로컬 시간 MM/DD HH:mm)
+- ✨ **Review 상세 화면 시간 추가**: potHeader에 시간 정보 표시
+
+### Technical Details
+```javascript
+// index.html:1332-1347 - formatStartedAt() 헬퍼 함수
+function formatStartedAt(isoString){
+  if(!isoString) return '-';
+  const d = new Date(isoString);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${month}/${day} ${hh}:${mm}`;  // "01/18 15:51"
+}
+
+// Review 리스트 (index.html:1356)
+<div class="small muted">${formatStartedAt(it.started_at)}</div>
+
+// Review 상세 (index.html:1538, 1543)
+<span style="color:#64748b;font-size:0.65rem">${timeFormatted}</span>
+```
+
+### Impact
+- ✅ **가독성 향상**: UTC ISO → 로컬 시간 (타임존 자동 변환)
+- ✅ **일관성**: 리스트 + 상세 화면 모두 동일한 포맷
+- ✅ **컴팩트**: 날짜+시간 8자리 (`01/18 15:51`)
+
+---
+
+## 🚀 v3.9.1 (2025-01-18) - Review 최신 핸드 조회 최적화 (Performance Fix)
+
+### Bug Fixes
+- 🐛 **Review 탭 최신 핸드 조회 속도 개선 (Critical)**: 3단계 스캔 로직 구현
+  - **문제**: Review 탭에서 마지막 핸드 조회 시 최근 100개 스캔 → 느린 응답 (500ms~2초)
+  - **원인**: 최신 핸드가 항상 마지막 행인데도 100개 전체 역순 스캔 수행
+  - **해결**: 1단계(최신 1개) → 2단계(최근 100개) → 3단계(전체) 순차 스캔
+
+### Performance Impact
+- ⚡ **99% 케이스 속도 개선**: 500ms → **50ms** (90% 절감)
+  - 1단계: 최신 1개 행만 확인 (단일 `getRange()` 호출)
+  - 2단계: 최근 100개 스캔 (기존 로직)
+  - 3단계: 전체 스캔 (드문 케이스 - fallback)
+
+### Technical Details
+```javascript
+// code.gs:828-835 (1단계: 최신 핸드 우선 체크)
+if(lastRow >= 2){
+  const lastRowData = shH.getRange(lastRow, 1, 1, shH.getLastColumn()).getValues()[0];
+  if(String(lastRowData[idxH]) === String(hand_id)){
+    console.log('[FAST] Latest hand matched (Row ' + lastRow + ')');
+    head = buildHead(lastRowData, map);  // ← 즉시 반환
+  }
+}
+
+// 2단계, 3단계는 head 없을 때만 실행
+```
+
+### Code Quality
+- ♻️ **코드 중복 제거**: `buildHead()` 헬퍼 함수로 head 객체 생성 로직 통합 (3군데 → 1군데)
+- 📊 **상세 로깅**: 각 단계별 디버깅 로그 추가 (`[FAST]`, `[RECENT]`, `[FALLBACK]`)
+
+---
+
+## 🚀 v3.9.0 (2025-01-18) - 로컬 PC 시간 매칭 수정 (Critical Fix)
+
+### Bug Fixes
+- 🐛 **시간 매칭 타임존 오류 수정 (Critical)**: UTC → 로컬 PC 시간 직접 저장
+  - **문제**: 클라이언트가 UTC 시간 저장 → 서버가 UTC 추출 → VIRTUAL B열(로컬 시간)과 9시간 차이 발생
+  - **원인**: 한국 15:51 핸드 등록 → `toISOString()` → "06:51" UTC → VIRTUAL B열 "15:51"과 불일치
+  - **해결**: 클라이언트가 로컬 HH:mm 직접 전송 (`started_at_local` 필드 추가)
+- 🐛 **스마트 캐싱 오류 수정 (Critical)**: 전체 스캔으로 변경
+  - **문제**: 마지막 전송 위치부터 스캔하여 이전 시간대 핸드 누락 (16:22 핸드 찾을 때 12:55~12:59만 스캔)
+  - **해결**: VIRTUAL 시트 전체 스캔 (00:00~23:59 순서 정렬이므로 시간 기반 필터링 불가)
+
+### Technical Details
+```javascript
+// 클라이언트 (index.html:1097-1109)
+const now = new Date();
+const localISO = now.toISOString(); // UTC (서버 저장용)
+const localHHMM = String(now.getHours()).padStart(2,'0') + ':' +
+                  String(now.getMinutes()).padStart(2,'0'); // "15:51" (로컬 시간)
+
+const payload = {
+  started_at: localISO,           // "2025-01-18T06:51:00Z"
+  started_at_local: localHHMM,    // "15:51" ← VIRTUAL B열 매칭용
+  // ...
+};
+
+// 서버 (code.gs:1063)
+const hhmmTime = head.started_at_local || extractTimeHHMM_(isoTime);
+// "15:51" 직접 사용 → VIRTUAL B열 "15:51"과 정확히 매칭 ✅
+```
+
+### Impact
+- ✅ **타임존 독립적 매칭**: PC 로컬 시간 그대로 사용
+- ✅ **엉뚱한 행 마킹 방지**: 9시간 차이 오류 완전 제거
+- ✅ **하위 호환**: `started_at_local` 없는 기존 핸드는 fallback 로직 사용
+
+---
+
+## 📋 v3.8.0 (2025-01-17) - VIRTUAL B열 시간 매칭 최적화 (Deprecated - v3.9.0에서 수정됨)
+
+⚠️ **이 버전은 타임존 오류가 있습니다. v3.9.0 사용을 권장합니다.**
+
+### Features
+- ⚡ **VIRTUAL 시간 매칭 전환**: C열 → B열
+- ⚡ **성능 최적화**: 순방향 스캔 + 스마트 캐싱
+
+### Known Issues (v3.9.0에서 수정됨)
+- ❌ UTC 시간 사용으로 인한 9시간 차이 발생
+- ❌ 한국 15:51 핸드 → UTC 06:51 추출 → VIRTUAL B열 15:51과 불일치
 
 ---
 

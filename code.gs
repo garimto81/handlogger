@@ -794,78 +794,74 @@ function getHandDetail(hand_id){
     ensureSheets_(); if (!hand_id) return {head:null, acts:[], error:'invalid hand_id'};
     const ss = appSS_(); const shH = ss.getSheetByName(SH.HANDS); const shA = ss.getSheetByName(SH.ACTS);
 
-    // 최적화: 최근 100개 핸드만 스캔 (VIRTUAL 전송은 보통 최신 핸드)
+    // v3.9.1: 3단계 스캔 최적화 (최신 1개 → 최근 100개 → 전체)
     const lastRow = shH.getLastRow();
-    const RECENT_LIMIT = 100;
-    const startRow = Math.max(2, lastRow - RECENT_LIMIT + 1);
-    const scanRows = lastRow - startRow + 1;
-
     const header = shH.getRange(1, 1, 1, shH.getLastColumn()).getValues()[0];
-    const data = shH.getRange(startRow, 1, scanRows, shH.getLastColumn()).getValues();
-
     const map = {};
     header.forEach((h, i) => map[String(h).trim()] = i);
-
     const idxH = map['hand_id'];
     let head = null;
 
-    // 역순 스캔 (최신 → 과거)
-    for (let i = data.length - 1; i >= 0; i--){
-      if (String(data[i][idxH]) === String(hand_id)){
-        const r = data[i], m = map;
-        head = {
-          hand_id: String(r[m['hand_id']]),
-          table_id: String(r[m['table_id']] || ''),
-          btn_seat: String(r[m['btn_seat']] || ''),
-          hand_no: String(r[m['hand_no']] || ''),
-          start_street: String(r[m['start_street']] || ''),
-          started_at: String(r[m['started_at']] || ''),
-          ended_at: String(r[m['ended_at']] || ''),
-          board: {
-            f1: r[m['board_f1']] || '',
-            f2: r[m['board_f2']] || '',
-            f3: r[m['board_f3']] || '',
-            turn: r[m['board_turn']] || '',
-            river: r[m['board_river']] || ''
-          },
-          pre_pot: Number(r[m['pre_pot']] || 0),
-          winner_seat: '', // v1.1: winner 제거
-          pot_final: String(r[m['pot_final']] || ''),
-          stacks_json: String(r[m['stacks_json']]||'{}'),
-          holes_json: String(r[m['holes_json']]||'{}')
-        };
-        break;
+    // 헬퍼 함수: head 객체 생성
+    const buildHead = (r, m) => ({
+      hand_id: String(r[m['hand_id']]),
+      table_id: String(r[m['table_id']] || ''),
+      btn_seat: String(r[m['btn_seat']] || ''),
+      hand_no: String(r[m['hand_no']] || ''),
+      start_street: String(r[m['start_street']] || ''),
+      started_at: String(r[m['started_at']] || ''),
+      ended_at: String(r[m['ended_at']] || ''),
+      board: {
+        f1: r[m['board_f1']] || '',
+        f2: r[m['board_f2']] || '',
+        f3: r[m['board_f3']] || '',
+        turn: r[m['board_turn']] || '',
+        river: r[m['board_river']] || ''
+      },
+      pre_pot: Number(r[m['pre_pot']] || 0),
+      winner_seat: '',
+      pot_final: String(r[m['pot_final']] || ''),
+      stacks_json: String(r[m['stacks_json']]||'{}'),
+      holes_json: String(r[m['holes_json']]||'{}')
+    });
+
+    // 1단계: 최신 1개 행만 확인 (99% 케이스 - Review 탭 최신 핸드)
+    if(lastRow >= 2){
+      const lastRowData = shH.getRange(lastRow, 1, 1, shH.getLastColumn()).getValues()[0];
+      if(String(lastRowData[idxH]) === String(hand_id)){
+        console.log('[FAST] Latest hand matched (Row ' + lastRow + ')');
+        head = buildHead(lastRowData, map);
       }
     }
+
+    // 2단계: 최근 100개 스캔 (head 없을 때만)
+    if(!head && lastRow >= 2){
+      const RECENT_LIMIT = 100;
+      const startRow = Math.max(2, lastRow - RECENT_LIMIT + 1);
+      const scanRows = lastRow - startRow + 1;
+      const data = shH.getRange(startRow, 1, scanRows, shH.getLastColumn()).getValues();
+
+      console.log('[RECENT] Scanning last ' + scanRows + ' hands (Row ' + startRow + '~' + lastRow + ')');
+
+      // 역순 스캔 (최신 → 과거)
+      for (let i = data.length - 1; i >= 0; i--){
+        if (String(data[i][idxH]) === String(hand_id)){
+          console.log('[RECENT] Found at Row ' + (startRow + i));
+          head = buildHead(data[i], map);
+          break;
+        }
+      }
+    }
+
+    // 3단계: 전체 스캔 (fallback - 드문 케이스)
     if (!head){
-      // 최근 100개에 없으면 전체 스캔 (fallback)
-      console.log('[FALLBACK] HandDetail not in recent 100, scanning all rows');
+      console.log('[FALLBACK] HandDetail not in recent ' + (lastRow >= 2 ? '100' : '0') + ', scanning all rows');
       const H = readAll_(shH);
       const idxHAll = H.map['hand_id'];
       for (let i=0; i<H.rows.length; i++){
         if (String(H.rows[i][idxHAll]) === String(hand_id)){
-          const r = H.rows[i], m = H.map;
-          head = {
-            hand_id: String(r[m['hand_id']]),
-            table_id: String(r[m['table_id']] || ''),
-            btn_seat: String(r[m['btn_seat']] || ''),
-            hand_no: String(r[m['hand_no']] || ''),
-            start_street: String(r[m['start_street']] || ''),
-            started_at: String(r[m['started_at']] || ''),
-            ended_at: String(r[m['ended_at']] || ''),
-            board: {
-              f1: r[m['board_f1']] || '',
-              f2: r[m['board_f2']] || '',
-              f3: r[m['board_f3']] || '',
-              turn: r[m['board_turn']] || '',
-              river: r[m['board_river']] || ''
-            },
-            pre_pot: Number(r[m['pre_pot']] || 0),
-            winner_seat: '',
-            pot_final: String(r[m['pot_final']] || ''),
-            stacks_json: String(r[m['stacks_json']]||'{}'),
-            holes_json: String(r[m['holes_json']]||'{}')
-          };
+          console.log('[FALLBACK] Found at Row ' + (i + 2));
+          head = buildHead(H.rows[i], H.map);
           break;
         }
       }
@@ -952,11 +948,10 @@ function updateExternalVirtual_(sheetId, detail, ext){
   const rngVals = sh.getRange(2,2,last-1,1).getValues();      // B열 원시 값
   const rngDisp = sh.getRange(2,2,last-1,1).getDisplayValues(); // B열 표시 값
 
-  // v3.8.0: B열 시간 매칭 (기존 C열 로직 재사용)
-  const isoTime = detail.head?.started_at || new Date().toISOString();
-  const hhmmTime = extractTimeHHMM_(isoTime);
+  // v3.9.0: B열 시간 매칭 (로컬 HH:mm 직접 사용)
+  const hhmmTime = detail.head?.started_at_local || extractTimeHHMM_(detail.head?.started_at);
   Logger.log('🔍 [EXT_VIRTUAL] B열 시간 매칭 시작 (PC 로컬 시간)');
-  Logger.log('  핸드 시간: ' + isoTime + ' → HH:mm=' + hhmmTime);
+  Logger.log('  핸드 시간: ' + hhmmTime);
 
   let pickRow = -1;
   for(let i=rngVals.length-1;i>=0;i--){
@@ -964,8 +959,16 @@ function updateExternalVirtual_(sheetId, detail, ext){
     const disp = rngDisp[i][0];
     const actualRow = i + 2;
 
-    const cellTime = parseTimeCellToTodayKST_(raw, disp); // 기존 함수 재사용
-    const cellHHMM = cellTime ? extractTimeHHMM_(cellTime.toISOString()) : '';
+    // v3.9.0: B열 DisplayValue 직접 매칭 (HH:mm 형식 정규화)
+    let cellHHMM = '';
+    if(disp && typeof disp === 'string' && disp.includes(':')){
+      const parts = String(disp).trim().split(':');
+      if(parts.length >= 2){
+        const hh = String(parts[0]).padStart(2, '0');
+        const mm = String(parts[1]).padStart(2, '0');
+        cellHHMM = `${hh}:${mm}`;
+      }
+    }
 
     if(cellHHMM === hhmmTime){
       pickRow = actualRow;
@@ -1057,23 +1060,18 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       return {success:false, reason:'no-rows'};
     }
 
-    // 3. B열 시간 매칭 (PC 로컬 시간) - 스마트 범위 스캔 (v3.8.0 최적화)
+    // 3. B열 시간 매칭 (PC 로컬 시간) - v3.9.0 수정
     const t3 = Date.now();
-    const hhmmTime = extractTimeHHMM_(isoTime);
+    // v3.9.0: started_at_local 우선 사용 (클라이언트가 로컬 HH:mm 전송)
+    const hhmmTime = head.started_at_local || extractTimeHHMM_(isoTime);
 
-    // v3.8.0: 마지막 전송 위치 캐싱 (PropertiesService, 시트별 저장)
-    const cache = PropertiesService.getScriptProperties();
-    const cacheKey = 'virtual_last_row_' + sheetId;
-    const lastSentRow = toInt_(cache.getProperty(cacheKey) || '0');
-
-    // 스마트 시작 위치: 마지막 전송 위치 or Row 2
-    const smartStart = Math.max(2, lastSentRow);
-    const startRow = smartStart;
+    // v3.9.0: 전체 스캔 (VIRTUAL 시트는 00:00~23:59 순서이므로 시간 기반 캐싱 불가)
+    const startRow = 2;
     const scanRows = last - startRow + 1;
 
     Logger.log('🔍 [VIRTUAL] B열 시간 매칭 시작 (PC 로컬 시간)');
-    Logger.log('  핸드 시간: ' + isoTime + ' → HH:mm=' + hhmmTime);
-    Logger.log('  📍 스마트 스캔: Row ' + startRow + '~' + last + ' (' + scanRows + '행)' + (lastSentRow > 0 ? ' [캐시: Row ' + lastSentRow + ']' : ''));
+    Logger.log('  핸드 시간: ' + hhmmTime);
+    Logger.log('  📍 전체 스캔: Row ' + startRow + '~' + last + ' (' + scanRows + '행)');
 
     const rngVals = sh.getRange(startRow, 2, scanRows, 1).getValues();      // B열 원시 값 (현지 시간)
     const rngDisp = sh.getRange(startRow, 2, scanRows, 1).getDisplayValues(); // B열 표시 값
@@ -1091,10 +1089,15 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       const disp = rngDisp[i][0];
       const eVal = rngE[i][0];
 
-      // v3.8.0: B열 시간을 직접 HH:mm 문자열로 추출 (toISOString 변환 제거)
+      // v3.9.0: B열 DisplayValue 직접 매칭 (HH:mm 형식 정규화)
       let cellHHMM = '';
       if(disp && typeof disp === 'string' && disp.includes(':')){
-        cellHHMM = disp.trim(); // "17:23" 같은 표시 값 직접 사용
+        const parts = String(disp).trim().split(':');
+        if(parts.length >= 2){
+          const hh = String(parts[0]).padStart(2, '0');
+          const mm = String(parts[1]).padStart(2, '0');
+          cellHHMM = `${hh}:${mm}`; // "17:23" 형식으로 정규화
+        }
       }
 
       const actualRow = startRow + i;
@@ -1105,12 +1108,14 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       }
 
       if(cellHHMM === hhmmTime){
-        if(eVal === '미완료'){
-          Logger.log('⏭️ [VIRTUAL] 스킵: Row ' + actualRow + ' (이미 처리됨)');
+        // v3.9.3: E열 필터 로직 수정 - 비어있는 행만 선택 (값이 있으면 스킵)
+        const eValStr = String(eVal || '').trim();
+        if(eValStr !== ''){
+          Logger.log('⏭️ [VIRTUAL] 스킵: Row ' + actualRow + ' (E열 이미 처리됨: "' + eValStr + '")');
           continue;
         }
         pickRow = actualRow;
-        Logger.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (Time: ' + cellHHMM + ') - 검색: ' + (i+1) + '/' + rngVals.length + '행');
+        Logger.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (Time: ' + cellHHMM + ', E열: 빈칸) - 검색: ' + (i+1) + '/' + rngVals.length + '행');
         break;
       }
     }
@@ -1172,21 +1177,46 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     }
 
     // 5. 비연속 컬럼 쓰기 (E,F,G,H,J,K => 5,6,7,8,10,11)
-    console.log('💾 [VIRTUAL] 시트 쓰기 시작 (Row: ' + pickRow + ')');
+    console.log('💾 [VIRTUAL] 시트 쓰기 시작');
+    console.log('  📄 시트 정보:');
+    console.log('    - 스프레드시트 ID: ' + sheetId);
+    console.log('    - 스프레드시트 이름: ' + ss.getName());
+    console.log('    - 시트명: ' + sheetName);
+    console.log('    - 대상 행(Row): ' + pickRow);
+    console.log('    - 시트 URL: ' + ss.getUrl());
+    console.log('');
+
     const t6 = Date.now();
     sh.getRange(pickRow, 5, 1, 1).setValue(E);
-    console.log('  ✓ E열 (col 5) 완료');
+    console.log('  ✓ E열 (col 5) 완료 - 입력값: ' + E);
     sh.getRange(pickRow, 6, 1, 1).setValue(F);
-    console.log('  ✓ F열 (col 6) 완료');
+    console.log('  ✓ F열 (col 6) 완료 - 입력값: ' + F.slice(0, 50) + '...');
     sh.getRange(pickRow, 7, 1, 1).setValue(G);
-    console.log('  ✓ G열 (col 7) 완료');
+    console.log('  ✓ G열 (col 7) 완료 - 입력값: ' + G);
     sh.getRange(pickRow, 8, 1, 1).setValue(H);
-    console.log('  ✓ H열 (col 8) 완료');
+    console.log('  ✓ H열 (col 8) 완료 - 입력값: ' + H.slice(0, 50) + '...');
     sh.getRange(pickRow,10, 1, 1).setValue(J);
-    console.log('  ✓ J열 (col 10) 완료 - 입력값:', J.slice(0, 100) + (J.length > 100 ? '...' : ''));
+    console.log('  ✓ J열 (col 10) 완료 - 입력값: ' + J.slice(0, 100) + (J.length > 100 ? '...' : ''));
     sh.getRange(pickRow,11, 1, 1).setValue('버추얼 테이블');
     console.log('  ✓ K열 (col 11) 완료 - 입력값: 버추얼 테이블');
     perfTimer.steps.writeSheet = Date.now() - t6;
+
+    // ✅ 검증: 실제로 쓰여진 값 확인
+    console.log('');
+    console.log('🔍 [VIRTUAL] 쓰기 후 검증 (Row ' + pickRow + ' 실제 값 확인):');
+    const verifyE = sh.getRange(pickRow, 5, 1, 1).getValue();
+    const verifyF = sh.getRange(pickRow, 6, 1, 1).getValue();
+    const verifyG = sh.getRange(pickRow, 7, 1, 1).getValue();
+    const verifyH = sh.getRange(pickRow, 8, 1, 1).getValue();
+    const verifyJ = sh.getRange(pickRow, 10, 1, 1).getValue();
+    const verifyK = sh.getRange(pickRow, 11, 1, 1).getValue();
+    console.log('  E열 실제값: ' + verifyE);
+    console.log('  F열 실제값: ' + String(verifyF).slice(0, 50) + '...');
+    console.log('  G열 실제값: ' + verifyG);
+    console.log('  H열 실제값: ' + String(verifyH).slice(0, 50) + '...');
+    console.log('  J열 실제값: ' + String(verifyJ).slice(0, 100) + (String(verifyJ).length > 100 ? '...' : ''));
+    console.log('  K열 실제값: ' + verifyK);
+    console.log('');
 
     // ⏱️ 성능 측정 결과 출력
     perfTimer.total = Date.now() - perfTimer.start;
@@ -1206,10 +1236,6 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     Logger.log('  🔴 가장 느린 단계: ' + bottleneck + ' (' + perfTimer.steps[bottleneck] + 'ms, ' +
       Math.round(perfTimer.steps[bottleneck] / perfTimer.total * 100) + '%)');
 
-    // v3.8.0: 성공 시 마지막 전송 위치 캐싱 (다음 전송 시 이 위치부터 스캔)
-    cache.setProperty(cacheKey, String(pickRow));
-    Logger.log('💾 [CACHE] 마지막 전송 위치 저장: Row ' + pickRow);
-
     log_('PUSH_VIRTUAL_OK', `row=${pickRow}`, '');
     const result = {success:true, row:pickRow, perf:perfTimer};
     console.log('🎉 [VIRTUAL] 완료 - Row ' + pickRow + '에 데이터 입력 성공');
@@ -1223,7 +1249,7 @@ function payloadHeadFrom_(p){
   const b=p.board||{};
   return {
     hand_id:'', table_id:String(p.table_id||''), btn_seat:String(p.btn_seat||''), hand_no:String(p.hand_no||''),
-    start_street:String(p.start_street||''), started_at:String(p.started_at||''), ended_at:String(p.ended_at||''),
+    start_street:String(p.start_street||''), started_at:String(p.started_at||''), started_at_local:String(p.started_at_local||''), ended_at:String(p.ended_at||''),
     board:{f1:b.f1||'',f2:b.f2||'',f3:b.f3||'',turn:b.turn||'',river:b.river||''},
     pre_pot:Number(p.pre_pot||0), winner_seat:'', pot_final:String(p.pot_final||''),
     stacks_json: JSON.stringify(p.stack_snapshot||{}), holes_json: JSON.stringify(p.holes||{})
@@ -1233,8 +1259,8 @@ function payloadHeadFrom_(p){
 function buildFileName_(detail){
   const head=detail.head||{};
 
-  // 1. 등록시간 (started_at에서 HH:mm 추출)
-  const timeHHMM = extractTimeHHMM_(head.started_at || '');
+  // 1. 등록시간 (v3.9.0: started_at_local 우선 사용)
+  const timeHHMM = head.started_at_local || extractTimeHHMM_(head.started_at || '');
   const timeFormatted = timeHHMM.replace(':', ''); // "14:30" → "1430"
 
   // 2. hand_no를 4자리 숫자로 포맷팅 (0001~9999)

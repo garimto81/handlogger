@@ -1,4 +1,4 @@
-<!-- index — Poker Hand Logger — v3.8.0 (2025-01-17) -->
+<!-- index — Poker Hand Logger — v3.9.0 (2025-01-18) -->
 <!doctype html>
 <html lang="ko">
 <head>
@@ -146,7 +146,7 @@ select#tableSel:has(option.keyplayer-option:checked) {
     <strong id="currentMode">Record</strong>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
-    <span class="muted small">v3.8.0</span>
+    <span class="muted small">v3.9.0</span>
     <button id="modeRecord" type="button" class="btnPrimary" style="padding:4px 12px;height:auto;font-size:0.7rem">Rec</button>
     <button id="modeReview" type="button" style="padding:4px 12px;height:auto;font-size:0.7rem">Rev</button>
   </div>
@@ -272,7 +272,7 @@ select#tableSel:has(option.keyplayer-option:checked) {
 </div></div>
 
 <script>
-/* ===== Poker Hand Logger — v3.8.0 (2025-01-17) ===== */
+/* ===== Poker Hand Logger — v3.9.0 (2025-01-18) ===== */
 const S={tables:[],roster:{},cfg:{},
   curTable:null,startStreetInit:'PREFLOP',curStreet:'PREFLOP',
   btnSeat:null,seats:[],activeSeatMap:{},prePot:0,actions:[],nextSeq:1,board:[],
@@ -1094,8 +1094,10 @@ function commitHand(){
   const manualHandNo = handNoInput.value ? toInt(handNoInput.value) : 0;
   const handNo = manualHandNo > 0 ? manualHandNo : S.nextHandNo;
 
-  // v3.8.0: UTC 시간으로 저장 (서버와 일관성 유지)
-  const localISO = new Date().toISOString();
+  // v3.9.0: 로컬 PC 시간으로 저장 (VIRTUAL B열 매칭용)
+  const now = new Date();
+  const localISO = now.toISOString(); // UTC 시간 (서버 저장용)
+  const localHHMM = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0'); // 로컬 HH:mm
 
   const payload={
     client_uuid: uuid(),
@@ -1104,6 +1106,7 @@ function commitHand(){
     hand_no: handNo,
     start_street:S.startStreetInit,
     started_at:localISO,
+    started_at_local:localHHMM, // v3.9.0: 로컬 HH:mm (VIRTUAL B열 매칭용)
     ended_at:'',
     btn_seat:S.btnSeat||'',
     board:getBoardObjectForSave(),
@@ -1211,6 +1214,10 @@ function sendCurrentHandToVirtual(){
   google.script.run
     .withSuccessHandler(res=>{
       console.log('VIRTUAL 전송 응답 (상세뷰):', res);
+      console.log('  res.success:', res?.success);
+      console.log('  res.reason:', res?.reason);
+      console.log('  res.row:', res?.row);
+      console.log('  res 전체 JSON:', JSON.stringify(res, null, 2));
       hideLoading(true);
       btn.disabled = false;
 
@@ -1326,6 +1333,23 @@ function loadList(reset){
   }).queryHands({},{num:reviewState.page,size:reviewState.size});
 }
 
+function formatStartedAt(isoString){
+  if(!isoString) return '-';
+  try{
+    const d = new Date(isoString);
+    if(isNaN(d.getTime())) return isoString; // 파싱 실패 시 원본 반환
+
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+
+    return `${month}/${day} ${hh}:${mm}`;  // "01/18 15:51"
+  }catch(e){
+    return isoString; // 에러 시 원본 반환
+  }
+}
+
 function createListItem(it){
   const div=document.createElement('div'); div.className='seatCard'; div.dataset.handId=it.hand_id;
   const arr=boardToArray(it.board||it)||[];
@@ -1333,7 +1357,7 @@ function createListItem(it){
 
   div.innerHTML=`
     <div><b>#${it.hand_no||'-'}</b> · Table ${it.table_id||'-'} · BTN ${it.btn_seat||'-'} · <span class="badge">${it.start_street||'-'}</span></div>
-    <div class="small muted">${it.started_at||''}</div>
+    <div class="small muted">${formatStartedAt(it.started_at)}</div>
     <div class="boardSmall">${boardBadgesHTML||'<span class="muted">-</span>'}</div>`;
   div.onclick=()=>selectAndLoadDetail(it.hand_id,div);
   return div;
@@ -1505,6 +1529,9 @@ function renderPotHeader(head,acts){
   const startInfo=startStreet&&startStreet!=='PREFLOP'?`START:${startStreet}`:'';
   const metaInfo=startInfo+prePotInfo;
 
+  // v3.9.2: 시간 표시 추가
+  const timeFormatted=formatStartedAt(head.started_at);
+
   return `<div class="potHeader">
     <div class="potHeader-top">
       <div><b>#${head.hand_no||'-'}</b> T${head.table_id||'-'} BTN${head.btn_seat||'-'}${bbInfo}</div>
@@ -1512,8 +1539,14 @@ function renderPotHeader(head,acts){
     </div>
     ${metaInfo?`<div class="potHeader-bottom">
       <span style="color:#64748b;font-size:0.65rem">${metaInfo}</span>
+      <span style="color:#64748b;font-size:0.65rem">${timeFormatted}</span>
+    </div>
+    <div class="potHeader-bottom">
       <span style="color:#64748b;font-size:0.65rem">${handIdShort}</span>
-    </div>`:`<div class="potHeader-bottom"><span style="color:#64748b;font-size:0.65rem">${handIdShort}</span></div>`}
+    </div>`:`<div class="potHeader-bottom">
+      <span style="color:#64748b;font-size:0.65rem">${timeFormatted}</span>
+      <span style="color:#64748b;font-size:0.65rem">${handIdShort}</span>
+    </div>`}
   </div>`;
 }
 
