@@ -1108,14 +1108,10 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       }
 
       if(cellHHMM === hhmmTime){
-        // v3.9.3: E열 필터 로직 수정 - 비어있는 행만 선택 (값이 있으면 스킵)
-        const eValStr = String(eVal || '').trim();
-        if(eValStr !== ''){
-          Logger.log('⏭️ [VIRTUAL] 스킵: Row ' + actualRow + ' (E열 이미 처리됨: "' + eValStr + '")');
-          continue;
-        }
+        // v3.9.5: E열 상태 무시 - 시간 매칭되면 무조건 덮어쓰기
         pickRow = actualRow;
-        Logger.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (Time: ' + cellHHMM + ', E열: 빈칸) - 검색: ' + (i+1) + '/' + rngVals.length + '행');
+        const eStatus = String(eVal || '').trim() || '(빈칸)';
+        Logger.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (Time: ' + cellHHMM + ', E열: ' + eStatus + ') - 검색: ' + (i+1) + '/' + rngVals.length + '행');
         break;
       }
     }

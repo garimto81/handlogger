@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.4
+# Poker Hand Logger v3.9.5
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,42 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.9.5 (2025-01-18) - VIRTUAL 덮어쓰기 정책 변경 (Feature)
+
+### Feature Changes
+- 🔄 **E열 필터 제거**: 시간 매칭되면 E열 상태 무시하고 **무조건 덮어쓰기**
+  - **Before (v3.9.3-v3.9.4)**: E열이 빈칸인 행만 선택 (값 있으면 스킵)
+  - **After (v3.9.5)**: E열 값 상관없이 시간 매칭되면 즉시 업데이트
+  - **Use Case**: 같은 시간대 핸드 재전송 시 이전 데이터 덮어쓰기
+
+### Technical Details
+```javascript
+// Before (v3.9.3)
+if(cellHHMM === hhmmTime){
+  const eValStr = String(eVal || '').trim();
+  if(eValStr !== ''){  // E열에 값 있으면 스킵
+    continue;
+  }
+  pickRow = actualRow;
+  break;
+}
+
+// After (v3.9.5)
+if(cellHHMM === hhmmTime){
+  pickRow = actualRow;  // ✅ 조건 없이 즉시 선택
+  const eStatus = String(eVal || '').trim() || '(빈칸)';
+  Logger.log('✅ Row ' + pickRow + ' (E열: ' + eStatus + ')');
+  break;
+}
+```
+
+### Impact
+- ✅ **재전송 가능**: 같은 시간 핸드를 다시 전송하면 기존 데이터 업데이트
+- ✅ **단순화**: E열 상태 체크 로직 제거로 코드 간소화
+- ⚠️ **주의**: 동일 시간대 여러 핸드 전송 시 마지막 핸드로 덮어씌워짐
 
 ---
 
