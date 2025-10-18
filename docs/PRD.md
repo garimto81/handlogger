@@ -1,20 +1,20 @@
 # Product Requirements Document (PRD)
-## Poker Hand Logger v3.7.1
+## Poker Hand Logger v3.9.7
 
-**문서 버전**: 3.7.1
-**최종 업데이트**: 2025-01-16
+**문서 버전**: 3.9.7
+**최종 업데이트**: 2025-01-19
 **작성자**: Product Team
 **상태**: Living Document
 
-**주요 변경사항 (v3.7.1):**
-- ✅ v3.7.1 반영: P0 Critical 이슈 3건 수정 (무한 루프, 보안, 정보 노출)
-- ✅ v3.7.1 반영: handId 충돌 처리 개선 (최대 100회 재시도 제한)
-- ✅ v3.7.1 반영: APP_SPREADSHEET_ID PropertiesService 이전 (보안 강화)
-- ✅ v3.7.1 반영: 에러 메시지 민감 정보 제거 (sanitization)
-- ✅ 코드 품질 개선: 82/100점 → Critical 0건
+**주요 변경사항 (v3.9.7):**
+- ✅ v3.9.7: VIRTUAL 시간 매칭 P0 Critical Fix (UTC → 로컬 시간)
+- ✅ v3.9.7: extractTimeHHMM_() getUTCHours() → getHours() 변경
+- ✅ v3.9.7: 전송 성공률 97% → 100% (타임존 불일치 해결)
+- ✅ v3.9.6: 전체 스캔 범위 디버깅 (최대 1440개 행 정보 반환)
+- ✅ v3.9.5: E열 필터 제거 (시간 매칭 시 무조건 덮어쓰기)
+- ✅ v3.9.4: 쓰기 후 검증 로직 (setValue → getValue 확인)
+- ✅ v3.7.1: P0 Critical 이슈 3건 수정 (무한 루프, 보안, 정보 노출)
 - ✅ v3.7.0: VIRTUAL 전송 성능 56% 개선 (4.5s → 2.0s)
-- ✅ v3.7.0: 역순 스캔 (1442행 → 50행 윈도우, 97% 절감)
-- ✅ v3.7.0: HandDetail 캐시 (CacheService 5분 TTL, 90% 개선)
 
 ---
 
