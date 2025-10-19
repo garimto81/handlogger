@@ -780,7 +780,7 @@ function queryHands(filter,paging){
  */
 function getCachedHandDetail_(hand_id){
   const cache = CacheService.getScriptCache();
-  const CACHE_VERSION = 'v3.9.18'; // 시간 디버깅 로그 추가
+  const CACHE_VERSION = 'v3.9.19'; // extractTimeHHMM_ fallback 제거
   const cacheKey = 'hand_' + CACHE_VERSION + '_' + hand_id;
   const cached = cache.get(cacheKey);
 
@@ -962,10 +962,14 @@ function updateExternalVirtual_(sheetId, detail, ext){
   const rngVals = sh.getRange(2,2,last-1,1).getValues();      // B열 원시 값
   const rngDisp = sh.getRange(2,2,last-1,1).getDisplayValues(); // B열 표시 값
 
-  // v3.9.0: B열 시간 매칭 (로컬 HH:mm 직접 사용)
-  const hhmmTime = detail.head?.started_at_local || extractTimeHHMM_(detail.head?.started_at);
+  // v3.9.19: fallback 제거
+  const hhmmTime = detail.head?.started_at_local;
+  if(!hhmmTime){
+    Logger.log('❌ [EXT_VIRTUAL] 실패: started_at_local 없음');
+    return {updated:false, reason:'no-started_at_local'};
+  }
   Logger.log('🔍 [EXT_VIRTUAL] B열 시간 매칭 시작 (PC 로컬 시간)');
-  Logger.log('  핸드 시간: ' + hhmmTime);
+  Logger.log('  핸드 시간: "' + hhmmTime + '" (started_at_local)');
 
   let pickRow = -1;
   for(let i=rngVals.length-1;i>=0;i--){
@@ -1074,27 +1078,25 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       return {success:false, reason:'no-rows'};
     }
 
-    // 3. B열 시간 매칭 (Cyprus PC 로컬 시간) - v3.9.9 수정
+    // 3. B열 시간 매칭 (Cyprus PC 로컬 시간) - v3.9.19: fallback 제거
     const t3 = Date.now();
-    // v3.9.0: started_at_local 우선 사용 (클라이언트가 로컬 HH:mm 전송)
-    const hhmmTime = head.started_at_local || extractTimeHHMM_(isoTime);
 
-    // v3.9.18: 디버깅 강화 - started_at_local 값 확인
-    Logger.log('🔍 [VIRTUAL] 시간 매칭 디버깅:');
-    Logger.log('  📌 head.started_at_local: "' + (head.started_at_local || 'undefined') + '"');
-    Logger.log('  📌 head.started_at (ISO): "' + (head.started_at || 'undefined') + '"');
-    Logger.log('  📌 extractTimeHHMM_(ISO) fallback: "' + extractTimeHHMM_(isoTime) + '"');
-    Logger.log('  📌 최종 사용 시간 (hhmmTime): "' + hhmmTime + '"');
-    Logger.log('  📌 타입: started_at_local type = ' + typeof head.started_at_local);
-    Logger.log('  📌 길이: started_at_local length = ' + (head.started_at_local ? head.started_at_local.length : 0));
-    Logger.log('  📌 Fallback 사용됨? ' + (head.started_at_local ? 'NO (started_at_local 있음)' : 'YES (fallback 사용)'));
+    // v3.9.19: extractTimeHHMM_ fallback 완전 제거
+    // 🔴 근본 원인: extractTimeHHMM_()가 new Date(isoTime).getHours()로 서버 타임존 적용 → +6시간
+    // ✅ 해결: started_at_local만 사용 (클라이언트 PC 로컬 HH:mm 그대로)
+    const hhmmTime = head.started_at_local;
+
+    if(!hhmmTime){
+      Logger.log('❌ [VIRTUAL] 실패: started_at_local 없음 (구버전 핸드)');
+      return {success:false, reason:'no-started_at_local'};
+    }
 
     // v3.9.0: 전체 스캔 (VIRTUAL 시트는 00:00~23:59 순서이므로 시간 기반 캐싱 불가)
     const startRow = 2;
     const scanRows = last - startRow + 1;
 
     Logger.log('🔍 [VIRTUAL] B열 시간 매칭 시작 (Cyprus PC 로컬 시간)');
-    Logger.log('  핸드 시간: ' + hhmmTime);
+    Logger.log('  핸드 시간: "' + hhmmTime + '" (started_at_local)');
     Logger.log('  📍 전체 스캔: Row ' + startRow + '~' + last + ' (' + scanRows + '행)');
 
     const rngVals = sh.getRange(startRow, 2, scanRows, 1).getValues();      // B열 원시 값 (Cyprus 시간)
@@ -1282,8 +1284,8 @@ function payloadHeadFrom_(p){
 function buildFileName_(detail){
   const head=detail.head||{};
 
-  // 1. 등록시간 (v3.9.0: started_at_local 우선 사용)
-  const timeHHMM = head.started_at_local || extractTimeHHMM_(head.started_at || '');
+  // 1. 등록시간 (v3.9.19: fallback 제거)
+  const timeHHMM = head.started_at_local || '0000';
   const timeFormatted = timeHHMM.replace(':', ''); // "14:30" → "1430"
 
   // 2. hand_no를 4자리 숫자로 포맷팅 (0001~9999)

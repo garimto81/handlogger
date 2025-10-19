@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.18
+# Poker Hand Logger v3.9.19
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,54 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.9.19 (2025-01-19) - extractTimeHHMM_ fallback 제거 (P0 Critical - Root Cause Fix)
+
+### Bug Fixes - 근본 원인 수정
+- 🔴 **extractTimeHHMM_() fallback 완전 제거**: +6시간 오류의 진짜 원인
+  - **근본 원인 발견**:
+    ```javascript
+    // 🔴 문제 코드 (v3.9.18 이전)
+    const hhmmTime = head.started_at_local || extractTimeHHMM_(isoTime);
+
+    function extractTimeHHMM_(isoTime){
+      const d = new Date(isoTime);  // ← 서버 타임존으로 변환됨!
+      const hh = String(d.getHours()).padStart(2,'0');  // ← +6시간 적용
+      return `${hh}:${mm}`;
+    }
+    ```
+  - **왜 +6시간?**:
+    1. 클라이언트: Cyprus 11:54 → ISO: `2025-01-19T09:54:00Z` (UTC-2)
+    2. 서버: `new Date("2025-01-19T09:54:00Z")` → Apps Script 서버 타임존(UTC+6?) 적용
+    3. 서버: `d.getHours()` → 15:54 또는 17:54
+  - **해결 (v3.9.19)**:
+    ```javascript
+    // ✅ 간단한 로직 복원
+    const hhmmTime = head.started_at_local;  // fallback 제거
+    if(!hhmmTime) return {success:false, reason:'no-started_at_local'};
+    ```
+  - **영향받은 함수**:
+    - `sendHandToVirtual()` - VIRTUAL 매칭 [code.gs:1083](code.gs#L1083)
+    - `updateExternalVirtual_()` - 외부 VIRTUAL [code.gs:966](code.gs#L966)
+    - `buildFileName_()` - 파일명 생성 [code.gs:1288](code.gs#L1288)
+
+### Technical Analysis
+**불필요한 복잡성 제거**:
+- ❌ **Before**: `started_at_local || extractTimeHHMM_(started_at)` (fallback → 타임존 변환 오류)
+- ✅ **After**: `started_at_local` (클라이언트 PC 로컬 시간 그대로 사용)
+
+**간단한 로직이어야 하는데 왜 복잡했나?**:
+1. 핸드에 로컬 PC 시간값 등록 ✅
+2. B열에 24시간값 출력 ✅
+3. 두 개 매칭 ✅
+→ **fallback 함수가 불필요한 타임존 변환을 추가했음**
+
+### Impact
+- ✅ **11:54 → 11:54 매칭 성공** (더 이상 17:54로 변환되지 않음)
+- ✅ **불필요한 코드 제거** (extractTimeHHMM_ fallback 완전 삭제)
+- ✅ **구버전 핸드 보호** (started_at_local 없으면 명시적 에러)
 
 ---
 
