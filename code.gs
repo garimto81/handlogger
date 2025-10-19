@@ -1060,7 +1060,7 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       return {success:false, reason:'no-rows'};
     }
 
-    // 3. C열 시간 매칭 (Seoul 로컬 시간) - v3.9.8 수정
+    // 3. B열 시간 매칭 (Cyprus PC 로컬 시간) - v3.9.9 수정
     const t3 = Date.now();
     // v3.9.0: started_at_local 우선 사용 (클라이언트가 로컬 HH:mm 전송)
     const hhmmTime = head.started_at_local || extractTimeHHMM_(isoTime);
@@ -1069,12 +1069,12 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     const startRow = 2;
     const scanRows = last - startRow + 1;
 
-    Logger.log('🔍 [VIRTUAL] C열 시간 매칭 시작 (Seoul 로컬 시간)');
+    Logger.log('🔍 [VIRTUAL] B열 시간 매칭 시작 (Cyprus PC 로컬 시간)');
     Logger.log('  핸드 시간: ' + hhmmTime);
     Logger.log('  📍 전체 스캔: Row ' + startRow + '~' + last + ' (' + scanRows + '행)');
 
-    const rngVals = sh.getRange(startRow, 3, scanRows, 1).getValues();      // C열 원시 값 (Seoul 시간)
-    const rngDisp = sh.getRange(startRow, 3, scanRows, 1).getDisplayValues(); // C열 표시 값
+    const rngVals = sh.getRange(startRow, 2, scanRows, 1).getValues();      // B열 원시 값 (Cyprus 시간)
+    const rngDisp = sh.getRange(startRow, 2, scanRows, 1).getDisplayValues(); // B열 표시 값
     const rngE = sh.getRange(startRow, 5, scanRows, 1).getValues();          // E열 상태
     perfTimer.steps.readColumns = Date.now() - t3;
 
@@ -1089,7 +1089,7 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       const disp = rngDisp[i][0];
       const eVal = rngE[i][0];
 
-      // v3.9.8: C열 DisplayValue 직접 매칭 (HH:mm 형식 정규화)
+      // v3.9.9: B열 DisplayValue 직접 매칭 (HH:mm 형식 정규화)
       let cellHHMM = '';
       if(disp && typeof disp === 'string' && disp.includes(':')){
         const parts = String(disp).trim().split(':');
@@ -1109,7 +1109,7 @@ function sendHandToVirtual(hand_id, sheetId, payload){
         // v3.9.5: E열 상태 무시 - 시간 매칭되면 무조건 덮어쓰기
         pickRow = actualRow;
         const eStatus = String(eVal || '').trim() || '(빈칸)';
-        Logger.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (C열 Seoul: ' + cellHHMM + ', E열: ' + eStatus + ') - 검색: ' + (i+1) + '/' + rngVals.length + '행');
+        Logger.log('✅ [VIRTUAL] 매칭 성공: Row ' + pickRow + ' (B열 Cyprus: ' + cellHHMM + ', E열: ' + eStatus + ') - 검색: ' + (i+1) + '/' + rngVals.length + '행');
         break;
       }
     }
