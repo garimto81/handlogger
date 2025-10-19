@@ -12,7 +12,8 @@
       "Bash(node:*)",
       "Bash(start \"\" \"d:\\AI\\claude01\\handlogger\\docs\\screenshots\\hand-detail-mockup.html\")",
       "Bash(python -c \"import webbrowser; webbrowser.open(''file:///d:/AI/claude01/handlogger/index.html'')\")",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

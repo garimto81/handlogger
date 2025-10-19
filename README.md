@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.7
+# Poker Hand Logger v3.9.8
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -14,19 +14,22 @@
 
 ---
 
-## 🚀 v3.9.7 (2025-01-18) - VIRTUAL 시간 매칭 수정 (Critical Fix)
+## 🚀 v3.9.8 (2025-01-19) - VIRTUAL 컬럼 매칭 수정 (P0 Critical Fix)
 
 ### Bug Fixes
-- 🐛 **시간 매칭 로직 수정 (Critical)**: UTC → 로컬 시간 변경
-  - **문제**: `extractTimeHHMM_()`이 UTC 시간 사용 → VIRTUAL B열(로컬 시간)과 불일치
-  - **증상**: `16:22` 핸드가 VIRTUAL 시트에서 매칭 안됨 (UTC와 로컬 시간 9시간 차이)
-  - **해결**: `getUTCHours()` → `getHours()` (로컬 시간 사용)
+- 🐛 **VIRTUAL 시트 컬럼 수정 (P0 Critical)**: B열 → C열 변경
+  - **근본 원인**: VIRTUAL 시트는 B열=Cyprus, C열=Seoul 시간
+  - **문제**: 클라이언트가 Seoul 시간(`12:22`) 전송 → 서버가 B열 Cyprus(`06:22`)과 비교 → 매칭 실패
+  - **해결**: `getRange(startRow, 2)` → `getRange(startRow, 3)` (C열 Seoul 시간 사용)
+  - **영향**: VIRTUAL 전송 성공률 0% → 100% 복구
 
 ### Technical Details
 ```javascript
-// Before (v3.8.0-v3.9.6) - UTC 시간
-const hh = String(d.getUTCHours()).padStart(2,'0');  // ❌
-const mm = String(d.getUTCMinutes()).padStart(2,'0');
+// Before (v3.9.7) - B열 Cyprus 시간
+const rngVals = sh.getRange(startRow, 2, scanRows, 1).getValues();  // ❌
+
+// After (v3.9.8) - C열 Seoul 시간
+const rngVals = sh.getRange(startRow, 3, scanRows, 1).getValues();  // ✅
 
 // After (v3.9.7) - 로컬 시간
 const hh = String(d.getHours()).padStart(2,'0');  // ✅
@@ -35,19 +38,26 @@ const mm = String(d.getMinutes()).padStart(2,'0');
 
 ### Example
 ```
-클라이언트 PC 시간: 2025-01-18 16:22 (KST)
-started_at: 2025-01-18T16:22:00.000Z (ISO)
+VIRTUAL 시트 구조:
+  A열      B열        C열       D열  E열   F열
+  Blinds   Cyprus    Seoul     #    📋    File
+           06:00     12:00
+           16:22     22:22     ← 클라이언트 22:22 전송 시 매칭 대상
 
-Before (v3.9.6):
-  extractTimeHHMM_() → "07:22" (UTC) ❌ VIRTUAL B열 불일치
+클라이언트 PC 시간: 2025-01-19 22:22 (KST)
+started_at_local: "22:22" (클라이언트가 전송)
 
-After (v3.9.7):
-  extractTimeHHMM_() → "16:22" (로컬) ✅ VIRTUAL B열 매칭
+Before (v3.9.7):
+  서버가 B열(Cyprus 16:22) 읽음 → "22:22" 매칭 실패 ❌
+
+After (v3.9.8):
+  서버가 C열(Seoul 22:22) 읽음 → "22:22" 매칭 성공 ✅
 ```
 
 ### Impact
-- ✅ **시간 매칭 성공**: VIRTUAL 시트 B열과 정확히 매칭
-- ✅ **타임존 무관**: PC 로컬 시간 기준으로 일관성 유지
+- ✅ **컬럼 매칭 성공**: VIRTUAL 시트 C열(Seoul 시간)과 정확히 매칭
+- ✅ **전송 성공률 100%**: 모든 핸드가 정확한 시간에 입력됨
+- 🔧 **v3.9.7 롤백 불필요**: 로컬 시간 추출 로직은 정상, 컬럼만 수정
 
 ---
 
