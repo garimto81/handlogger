@@ -1,15 +1,17 @@
 # Product Requirements Document (PRD)
-## Poker Hand Logger v3.9.7
+## Poker Hand Logger v3.9.20
 
-**문서 버전**: 3.9.7
+**문서 버전**: 3.9.20
 **최종 업데이트**: 2025-01-19
 **작성자**: Product Team
 **상태**: Living Document
 
-**주요 변경사항 (v3.9.7):**
-- ✅ v3.9.7: VIRTUAL 시간 매칭 P0 Critical Fix (UTC → 로컬 시간)
-- ✅ v3.9.7: extractTimeHHMM_() getUTCHours() → getHours() 변경
-- ✅ v3.9.7: 전송 성공률 97% → 100% (타임존 불일치 해결)
+**주요 변경사항 (v3.9.17-v3.9.20):**
+- ✅ v3.9.20: 클라이언트 fallback 추가 (구버전 핸드 호환성)
+- ✅ v3.9.19: 서버 fallback 제거 (타임존 +6시간 근본 원인 해결)
+- ✅ v3.9.17: B열 덮어쓰기 (데이터 일관성 보장)
+- ✅ v3.9.16: 캐시 무효화 (버전 키 v3.9.20)
+- ✅ v3.9.7: VIRTUAL 시간 매칭 부분 수정 (UTC → 로컬 시간)
 - ✅ v3.9.6: 전체 스캔 범위 디버깅 (최대 1440개 행 정보 반환)
 - ✅ v3.9.5: E열 필터 제거 (시간 매칭 시 무조건 덮어쓰기)
 - ✅ v3.9.4: 쓰기 후 검증 로직 (setValue → getValue 확인)
