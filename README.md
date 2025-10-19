@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.12
+# Poker Hand Logger v3.9.14
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -14,7 +14,52 @@
 
 ---
 
-## 🚀 v3.9.12 (2025-01-19) - appendRow started_at_local 누락 수정 (P0 Critical Fix)
+## 🚀 v3.9.14 (2025-01-19) - buildHead() started_at_local 누락 수정 (P0 Critical Fix - Root Cause)
+
+### Bug Fixes
+- 🐛 **buildHead() started_at_local 누락 (P0 Critical - Root Cause)**: 리뷰 모드에서 핸드 읽을 때 필드 누락
+  - **근본 원인**: getHandDetail()의 buildHead() 함수에서 `started_at_local` 필드를 읽지 않음
+  - **증상**:
+    - 클라이언트: "00:23" 전송 ✅
+    - 서버 저장: HANDS G열에 "00:23" 저장 ✅
+    - **리뷰 읽기**: `head.started_at_local` = undefined ❌
+    - Fallback 호출: extractTimeHHMM_() → 서버 타임존 → +6시간 ❌
+  - **해결**: buildHead()에 `started_at_local: String(r[m['started_at_local']] || '')` 추가
+  - **파일**: [code.gs:822](code.gs#L822)
+
+### Technical Details
+```javascript
+// Before (v3.9.12) - started_at_local 필드 읽지 않음
+const buildHead = (r, m) => ({
+  started_at: String(r[m['started_at']] || ''),
+  // ❌ started_at_local 누락!
+  ended_at: String(r[m['ended_at']] || ''),
+  ...
+});
+
+// After (v3.9.14) - 필드 읽기 추가
+const buildHead = (r, m) => ({
+  started_at: String(r[m['started_at']] || ''),
+  started_at_local: String(r[m['started_at_local']] || ''), // ✅ 추가
+  ended_at: String(r[m['ended_at']] || ''),
+  ...
+});
+```
+
+### Impact
+- ✅ **started_at_local 정상 읽기**: head.started_at_local = "00:23"
+- ✅ **Fallback 사용 안함**: extractTimeHHMM_() 호출 없음
+- ✅ **VIRTUAL 정확 매칭**: 00:23 == 00:23 (Cyprus 로컬 시간)
+- ✅ **+6시간 오류 완전 해결**: 서버 타임존 영향 제거
+
+### Version History
+**v3.9.14**: buildHead() started_at_local 읽기 추가 (근본 원인 수정)
+**v3.9.13**: 디버깅 로그 추가
+**v3.9.12**: appendRow started_at_local 저장 추가
+
+---
+
+## 📜 v3.9.12 (2025-01-19) - appendRow started_at_local 누락 수정 (P0 Critical Fix)
 
 ### Bug Fixes
 - 🐛 **appendRow 누락 수정 (P0 Critical)**: `started_at_local` 저장 로직 추가

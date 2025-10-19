@@ -606,6 +606,11 @@ function _saveCore_(payload){
   // hand_no 자동
   let handNo = payload.hand_no; if(!handNo){ handNo = String(nextHandSeq_(String(payload.table_id||''))); }
 
+  // v3.9.13: 디버깅 로그
+  Logger.log('🔍 [DEBUG] payload.started_at: ' + payload.started_at);
+  Logger.log('🔍 [DEBUG] payload.started_at_local: ' + payload.started_at_local);
+  Logger.log('🔍 [DEBUG] typeof started_at_local: ' + typeof payload.started_at_local);
+
   const b=payload.board||{};
   shH.appendRow([
     handId, String(payload.client_uuid||''), String(payload.table_id||''), String(handNo||''),
@@ -814,6 +819,7 @@ function getHandDetail(hand_id){
       hand_no: String(r[m['hand_no']] || ''),
       start_street: String(r[m['start_street']] || ''),
       started_at: String(r[m['started_at']] || ''),
+      started_at_local: String(r[m['started_at_local']] || ''), // v3.9.14: Cyprus 로컬 시간 읽기
       ended_at: String(r[m['ended_at']] || ''),
       board: {
         f1: r[m['board_f1']] || '',
