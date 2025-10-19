@@ -780,7 +780,7 @@ function queryHands(filter,paging){
  */
 function getCachedHandDetail_(hand_id){
   const cache = CacheService.getScriptCache();
-  const CACHE_VERSION = 'v3.9.21'; // 파일명 T{TableNo} 추가
+  const CACHE_VERSION = 'v3.9.22'; // ended_at 컬럼 누락 수정
   const cacheKey = 'hand_' + CACHE_VERSION + '_' + hand_id;
   const cached = cache.get(cacheKey);
 
@@ -802,9 +802,14 @@ function getCachedHandDetail_(hand_id){
 }
 
 function getHandDetail(hand_id){
+  Logger.log('🔍 [getHandDetail] 호출: hand_id=' + hand_id);
   let result = { head:null, acts:[], error:'' };
   try{
-    ensureSheets_(); if (!hand_id) return {head:null, acts:[], error:'invalid hand_id'};
+    ensureSheets_();
+    if (!hand_id) {
+      Logger.log('❌ [getHandDetail] hand_id 없음');
+      return {head:null, acts:[], error:'invalid hand_id'};
+    }
     const ss = appSS_(); const shH = ss.getSheetByName(SH.HANDS); const shA = ss.getSheetByName(SH.ACTS);
 
     // v3.9.1: 3단계 스캔 최적화 (최신 1개 → 최근 100개 → 전체)
@@ -816,28 +821,36 @@ function getHandDetail(hand_id){
     let head = null;
 
     // 헬퍼 함수: head 객체 생성
-    const buildHead = (r, m) => ({
-      hand_id: String(r[m['hand_id']]),
-      table_id: String(r[m['table_id']] || ''),
-      btn_seat: String(r[m['btn_seat']] || ''),
-      hand_no: String(r[m['hand_no']] || ''),
-      start_street: String(r[m['start_street']] || ''),
-      started_at: String(r[m['started_at']] || ''),
-      started_at_local: String(r[m['started_at_local']] || ''), // v3.9.14: Cyprus 로컬 시간 읽기
-      ended_at: String(r[m['ended_at']] || ''),
-      board: {
-        f1: r[m['board_f1']] || '',
-        f2: r[m['board_f2']] || '',
-        f3: r[m['board_f3']] || '',
-        turn: r[m['board_turn']] || '',
-        river: r[m['board_river']] || ''
-      },
-      pre_pot: Number(r[m['pre_pot']] || 0),
-      winner_seat: '',
-      pot_final: String(r[m['pot_final']] || ''),
-      stacks_json: String(r[m['stacks_json']]||'{}'),
-      holes_json: String(r[m['holes_json']]||'{}')
-    });
+    const buildHead = (r, m) => {
+      // v3.9.22: 컬럼 존재 여부 확인 후 안전하게 접근
+      const safeGet = (key, defaultVal = '') => {
+        const idx = m[key];
+        return (idx !== undefined && idx !== null) ? r[idx] : defaultVal;
+      };
+
+      return {
+        hand_id: String(safeGet('hand_id')),
+        table_id: String(safeGet('table_id')),
+        btn_seat: String(safeGet('btn_seat')),
+        hand_no: String(safeGet('hand_no')),
+        start_street: String(safeGet('start_street')),
+        started_at: String(safeGet('started_at')),
+        started_at_local: String(safeGet('started_at_local')), // v3.9.14: Cyprus 로컬 시간 읽기
+        ended_at: String(safeGet('ended_at')), // v3.9.22: ended_at 추가
+        board: {
+          f1: safeGet('board_f1') || '',
+          f2: safeGet('board_f2') || '',
+          f3: safeGet('board_f3') || '',
+          turn: safeGet('board_turn') || '',
+          river: safeGet('board_river') || ''
+        },
+        pre_pot: Number(safeGet('pre_pot', 0)),
+        winner_seat: '',
+        pot_final: String(safeGet('pot_final')),
+        stacks_json: String(safeGet('stacks_json', '{}')),
+        holes_json: String(safeGet('holes_json', '{}'))
+      };
+    };
 
     // 1단계: 최신 1개 행만 확인 (99% 케이스 - Review 탭 최신 핸드)
     if(lastRow >= 2){
@@ -881,7 +894,10 @@ function getHandDetail(hand_id){
       }
     }
 
-    if (!head) return { head:null, acts:[], error:'hand not found' };
+    if (!head) {
+      Logger.log('❌ [getHandDetail] hand not found: ' + hand_id);
+      return { head:null, acts:[], error:'hand not found' };
+    }
 
     // ACTIONS 최적화: 최근 500개만 스캔
     const lastActRow = shA.getLastRow();
@@ -912,8 +928,11 @@ function getHandDetail(hand_id){
       }))
       .sort((x,y)=>x.seq - y.seq);
 
-    return { head, acts, error:'' };
+    const finalResult = { head, acts, error:'' };
+    Logger.log('✅ [getHandDetail] 성공: hand_id=' + hand_id + ', acts=' + acts.length);
+    return finalResult;
   } catch(e){
+    Logger.log('❌ [getHandDetail] 예외: ' + (e.message || e));
     return { head:null, acts:[], error:(e && e.message) ? e.message : 'unknown' };
   } finally { /* no-op */ }
 }

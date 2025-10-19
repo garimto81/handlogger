@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.21
+# Poker Hand Logger v3.9.22
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,34 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.9.22 (2025-01-19) - Review 탭 핸드 상세 조회 오류 수정 (P0 Critical)
+
+### Bug Fixes
+- 🐛 **getHandDetail() ended_at 컬럼 누락 수정**
+  - **문제**: Review 탭에서 핸드 상세 조회 시 `undefined` 응답
+    - 원인: `buildHead()` 함수에서 `ended_at` 컬럼 매핑 누락
+    - 증상: `ended_at` 이후 모든 컬럼이 한 열씩 밀림 (btn_seat, board_*, pre_pot 등)
+  - **해결**:
+    ```javascript
+    // Before (v3.9.21)
+    started_at_local: String(r[m['started_at_local']] || ''),
+    board: { f1: r[m['board_f1']] || '', ... }  // ← ended_at 누락!
+
+    // After (v3.9.22)
+    started_at_local: String(safeGet('started_at_local')),
+    ended_at: String(safeGet('ended_at')),  // ← 추가!
+    board: { f1: safeGet('board_f1') || '', ... }
+    ```
+  - **추가 개선**: `safeGet()` 헬퍼 함수 도입 (컬럼 존재 여부 안전 검증)
+  - **파일**: [code.gs:824-853](code.gs#L824)
+
+### Impact
+- ✅ **Review 탭 정상 작동** (핸드 상세 조회 성공)
+- ✅ **VIRTUAL 전송 정상화** (올바른 데이터 읽기)
+- ✅ **캐시 무효화** (v3.9.22 버전 키)
 
 ---
 
