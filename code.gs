@@ -780,7 +780,7 @@ function queryHands(filter,paging){
  */
 function getCachedHandDetail_(hand_id){
   const cache = CacheService.getScriptCache();
-  const CACHE_VERSION = 'v3.9.17'; // B열 started_at_local 덮어쓰기 추가
+  const CACHE_VERSION = 'v3.9.18'; // 시간 디버깅 로그 추가
   const cacheKey = 'hand_' + CACHE_VERSION + '_' + hand_id;
   const cached = cache.get(cacheKey);
 
@@ -1079,13 +1079,15 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     // v3.9.0: started_at_local 우선 사용 (클라이언트가 로컬 HH:mm 전송)
     const hhmmTime = head.started_at_local || extractTimeHHMM_(isoTime);
 
-    // v3.9.16: 디버깅 - started_at_local 값 확인
+    // v3.9.18: 디버깅 강화 - started_at_local 값 확인
     Logger.log('🔍 [VIRTUAL] 시간 매칭 디버깅:');
-    Logger.log('  head.started_at_local: "' + (head.started_at_local || 'undefined') + '"');
-    Logger.log('  head.started_at (ISO): "' + (head.started_at || 'undefined') + '"');
-    Logger.log('  extractTimeHHMM_(ISO) fallback: "' + extractTimeHHMM_(isoTime) + '"');
-    Logger.log('  최종 사용 시간: "' + hhmmTime + '"');
-    Logger.log('  타입 확인: started_at_local type = ' + typeof head.started_at_local);
+    Logger.log('  📌 head.started_at_local: "' + (head.started_at_local || 'undefined') + '"');
+    Logger.log('  📌 head.started_at (ISO): "' + (head.started_at || 'undefined') + '"');
+    Logger.log('  📌 extractTimeHHMM_(ISO) fallback: "' + extractTimeHHMM_(isoTime) + '"');
+    Logger.log('  📌 최종 사용 시간 (hhmmTime): "' + hhmmTime + '"');
+    Logger.log('  📌 타입: started_at_local type = ' + typeof head.started_at_local);
+    Logger.log('  📌 길이: started_at_local length = ' + (head.started_at_local ? head.started_at_local.length : 0));
+    Logger.log('  📌 Fallback 사용됨? ' + (head.started_at_local ? 'NO (started_at_local 있음)' : 'YES (fallback 사용)'));
 
     // v3.9.0: 전체 스캔 (VIRTUAL 시트는 00:00~23:59 순서이므로 시간 기반 캐싱 불가)
     const startRow = 2;

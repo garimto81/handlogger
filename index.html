@@ -1117,6 +1117,13 @@ function commitHand(){
     holes:S.holes,
     stack_snapshot:S.stacks
   };
+
+  // v3.9.18: 디버깅 - 핸드 등록 시간 확인
+  console.log('🔍 [COMMIT] 핸드 등록 시간 디버깅:');
+  console.log('  📌 브라우저 로컬 시간: ' + now.toLocaleString('en-GB', {timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone}));
+  console.log('  📌 started_at (ISO): ' + localISO);
+  console.log('  📌 started_at_local (HH:mm): ' + localHHMM);
+  console.log('  📌 브라우저 타임존: ' + Intl.DateTimeFormat().resolvedOptions().timeZone);
   const msg=document.getElementById('commitMsg');
   const btn=document.getElementById('commitBtn'); btn.disabled=true;
 
