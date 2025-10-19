@@ -248,7 +248,7 @@ function ensureSheets_(){
   const ss=appSS_();
   setHeaderIfEmpty_(getOrCreateSheet_(ss,SH.HANDS),[
     'hand_id','client_uuid','table_id','hand_no',
-    'start_street','started_at','ended_at','btn_seat',
+    'start_street','started_at','started_at_local','ended_at','btn_seat',
     'board_f1','board_f2','board_f3','board_turn','board_river',
     'pre_pot','winner_seat','pot_final','stacks_json','holes_json','schema_ver'
   ]);

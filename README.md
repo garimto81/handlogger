@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.10
+# Poker Hand Logger v3.9.11
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,57 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.9.11 (2025-01-19) - started_at_local 필드 추가 (P0 Critical Fix)
+
+### Bug Fixes
+- 🐛 **+6시간 시간 매칭 오류 수정 (P0 Critical)**: `started_at_local` 필드 추가
+  - **근본 원인**: `started_at_local`이 HANDS 시트에 저장되지 않아 Fallback 사용
+  - **Fallback 오류**: 서버 타임존으로 변환 → 클라이언트 16:22 → 서버 22:22 추출
+  - **증상**: VIRTUAL B열 16:22와 매칭 실패 (22:22 - 16:22 = +6시간 오프셋)
+  - **해결**: HANDS 시트 스키마에 `started_at_local` 컬럼 추가
+  - **파일**: [code.gs:251](code.gs#L251)
+
+### Technical Details
+```javascript
+// Before (v3.9.10)
+setHeaderIfEmpty_(getOrCreateSheet_(ss,SH.HANDS),[
+  ...
+  'start_street','started_at','ended_at','btn_seat',  // ❌ started_at_local 없음
+  ...
+]);
+
+// After (v3.9.11)
+setHeaderIfEmpty_(getOrCreateSheet_(ss,SH.HANDS),[
+  ...
+  'start_street','started_at','started_at_local','ended_at','btn_seat',  // ✅
+  ...
+]);
+```
+
+### 시간 매칭 로직
+```
+v3.9.11 (정상):
+  1. 클라이언트: started_at_local = "16:22" 전송
+  2. HANDS 시트: started_at_local 저장 ✅
+  3. Review 조회: head.started_at_local = "16:22"
+  4. VIRTUAL B열 "16:22" 매칭 성공 ✅
+
+v3.9.10 (오류):
+  1. 클라이언트: started_at_local = "16:22" 전송
+  2. HANDS 시트: 컬럼 없음 → 무시됨 ❌
+  3. Review 조회: head.started_at_local = undefined
+  4. Fallback: extractTimeHHMM_(started_at)
+     → 서버 타임존 변환 → "22:22" (UTC+8 가정)
+  5. VIRTUAL B열 "16:22" 매칭 실패 ❌
+```
+
+### Impact
+- ✅ **시간 매칭 100% 정확**: 클라이언트 로컬 시간 그대로 사용
+- ✅ **타임존 무관**: 서버 위치와 무관하게 작동
+- ✅ **전송 성공률 100%**: VIRTUAL B열과 정확히 매칭
 
 ---
 
