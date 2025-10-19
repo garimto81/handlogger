@@ -609,7 +609,11 @@ function _saveCore_(payload){
   const b=payload.board||{};
   shH.appendRow([
     handId, String(payload.client_uuid||''), String(payload.table_id||''), String(handNo||''),
-    String(payload.start_street||''), String(payload.started_at||new Date().toISOString()), String(payload.ended_at||''), String(payload.btn_seat||''),
+    String(payload.start_street||''),
+    String(payload.started_at||new Date().toISOString()),
+    String(payload.started_at_local||''), // v3.9.12: 로컬 시간 저장
+    String(payload.ended_at||''),
+    String(payload.btn_seat||''),
     String(b.f1||''), String(b.f2||''), String(b.f3||''), String(b.turn||''), String(b.river||''),
     Number(payload.pre_pot||0),
     '', // winner_seat 제거(v1.1) — 공란 유지

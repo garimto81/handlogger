@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.11
+# Poker Hand Logger v3.9.12
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -14,10 +14,48 @@
 
 ---
 
-## 🚀 v3.9.11 (2025-01-19) - started_at_local 필드 추가 (P0 Critical Fix)
+## 🚀 v3.9.12 (2025-01-19) - appendRow started_at_local 누락 수정 (P0 Critical Fix)
 
 ### Bug Fixes
-- 🐛 **+6시간 시간 매칭 오류 수정 (P0 Critical)**: `started_at_local` 필드 추가
+- 🐛 **appendRow 누락 수정 (P0 Critical)**: `started_at_local` 저장 로직 추가
+  - **문제**: v3.9.11에서 스키마만 추가하고 appendRow는 수정 안함
+  - **증상**: HANDS 시트에 started_at_local 빈칸 → Fallback 함수 계속 사용
+  - **결과**: 여전히 +6시간 오류 발생 (00:23 → 06:23)
+  - **해결**: appendRow에 `payload.started_at_local` 추가
+  - **파일**: [code.gs:614](code.gs#L614)
+
+### Technical Details
+```javascript
+// Before (v3.9.11) - 스키마만 있고 저장 안됨
+shH.appendRow([
+  handId, ...,
+  String(payload.started_at||new Date().toISOString()),
+  // ❌ started_at_local 누락!
+  String(payload.ended_at||''),
+  ...
+]);
+
+// After (v3.9.12) - 실제 저장
+shH.appendRow([
+  handId, ...,
+  String(payload.started_at||new Date().toISOString()),
+  String(payload.started_at_local||''), // ✅ 추가
+  String(payload.ended_at||''),
+  ...
+]);
+```
+
+### Impact
+- ✅ **started_at_local 실제 저장**: HANDS 시트 G열에 "00:23" 저장
+- ✅ **Fallback 사용 안함**: extractTimeHHMM_() 호출 없음
+- ✅ **시간 매칭 100% 정확**: 00:23 입력 → 00:23 매칭
+
+---
+
+## 🚀 v3.9.11 (2025-01-19) - started_at_local 스키마 추가 (Incomplete Fix)
+
+### Bug Fixes
+- ⚠️ **스키마만 추가 (불완전)**: appendRow 누락으로 실제 저장 안됨
   - **근본 원인**: `started_at_local`이 HANDS 시트에 저장되지 않아 Fallback 사용
   - **Fallback 오류**: 서버 타임존으로 변환 → 클라이언트 16:22 → 서버 22:22 추출
   - **증상**: VIRTUAL B열 16:22와 매칭 실패 (22:22 - 16:22 = +6시간 오프셋)
