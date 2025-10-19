@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.14
+# Poker Hand Logger v3.9.15
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -14,7 +14,26 @@
 
 ---
 
-## 🚀 v3.9.14 (2025-01-19) - buildHead() started_at_local 누락 수정 (P0 Critical Fix - Root Cause)
+## 🚀 v3.9.15 (2025-01-19) - Review 모드 시간 표시 수정 (P0 Final Fix)
+
+### Bug Fixes
+- 🐛 **Review 모드 시간 표시 +6시간 오류 (P0 Final)**: formatStartedAt() 브라우저 타임존 변환 문제
+  - **최종 근본 원인**:
+    - index.html `formatStartedAt(head.started_at)` → `new Date(isoTime)` 파싱 → 브라우저 타임존 적용 → +6시간
+    - code.gs `queryHands()`에서 started_at_local 미포함 (11개 컬럼만 읽기)
+  - **해결**:
+    - code.gs: queryHands() started_at_local 추가 (12개 컬럼)
+    - index.html: formatLocalTime() 헬퍼 추가, started_at_local 우선 사용
+  - **파일**: [code.gs:724,759-766](code.gs#L724), [index.html:1354-1360](index.html#L1354)
+
+### Impact
+- ✅ Review 모드 정확한 시간 (00:23 == 00:23)
+- ✅ VIRTUAL 매칭 일관성 (UI == 매칭)
+- ✅ +6시간 오류 완전 해결
+
+---
+
+## 📜 v3.9.14 (2025-01-19) - buildHead() started_at_local 누락 수정 (P0 Critical Fix - Root Cause)
 
 ### Bug Fixes
 - 🐛 **buildHead() started_at_local 누락 (P0 Critical - Root Cause)**: 리뷰 모드에서 핸드 읽을 때 필드 누락

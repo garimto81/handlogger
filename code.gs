@@ -706,8 +706,9 @@ function queryHands(filter,paging){
   try{
     const sh=appSS_().getSheetByName(SH.HANDS);
 
-    // v3.5.0: Sparse Column Reads - 필요한 11개 컬럼만 읽기 (20개 → 11개, 45% 절감)
-    // 필요 컬럼: hand_id(A), table_id(C), hand_no(D), start_street(E), started_at(F),
+    // v3.5.0: Sparse Column Reads - 필요한 12개 컬럼만 읽기 (20개 → 12개)
+    // v3.9.15: started_at_local 추가 (Cyprus 로컬 시간 표시용)
+    // 필요 컬럼: hand_id(A), table_id(C), hand_no(D), start_street(E), started_at(F), started_at_local(G),
     //           btn_seat(H), board_f1~f3(I,J,K), board_turn(L), board_river(M)
     const lastRow = sh.getLastRow();
     if(lastRow < 2) return { total:0, items:[], error:'' };
@@ -720,7 +721,7 @@ function queryHands(filter,paging){
     // 필요한 컬럼 인덱스
     const cols = [
       map['hand_id'], map['table_id'], map['hand_no'], map['start_street'],
-      map['started_at'], map['btn_seat'],
+      map['started_at'], map['started_at_local'], map['btn_seat'],
       map['board_f1'], map['board_f2'], map['board_f3'],
       map['board_turn'], map['board_river']
     ];
@@ -755,13 +756,14 @@ function queryHands(filter,paging){
       hand_no:String(r[2]||''),
       start_street:String(r[3]||''),
       started_at:String(r[4]||''),
-      btn_seat:String(r[5]||''),
+      started_at_local:String(r[5]||''), // v3.9.15: 로컬 시간
+      btn_seat:String(r[6]||''),
       board:{
-        f1:r[6]||'',
-        f2:r[7]||'',
-        f3:r[8]||'',
-        turn:r[9]||'',
-        river:r[10]||''
+        f1:r[7]||'',  // v3.9.15: started_at_local 추가로 인덱스 +1
+        f2:r[8]||'',
+        f3:r[9]||'',
+        turn:r[10]||'',
+        river:r[11]||''
       }
     }));
 

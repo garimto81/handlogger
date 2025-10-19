@@ -1350,14 +1350,28 @@ function formatStartedAt(isoString){
   }
 }
 
+// v3.9.15: 로컬 시간 포맷팅 (HH:mm → MM/DD HH:mm)
+function formatLocalTime(hhmmTime){
+  if(!hhmmTime) return '-';
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${month}/${day} ${hhmmTime}`;  // "10/19 00:23"
+}
+
 function createListItem(it){
   const div=document.createElement('div'); div.className='seatCard'; div.dataset.handId=it.hand_id;
   const arr=boardToArray(it.board||it)||[];
   const boardBadgesHTML=arr.slice(0,3).map(cs=>renderCardBadge(cs,'small')).join('')+(arr.length>3?'...':'');
 
+  // v3.9.15: started_at_local 우선 사용
+  const timeDisplay = it.started_at_local
+    ? formatLocalTime(it.started_at_local)
+    : formatStartedAt(it.started_at);
+
   div.innerHTML=`
     <div><b>#${it.hand_no||'-'}</b> · Table ${it.table_id||'-'} · BTN ${it.btn_seat||'-'} · <span class="badge">${it.start_street||'-'}</span></div>
-    <div class="small muted">${formatStartedAt(it.started_at)}</div>
+    <div class="small muted">${timeDisplay}</div>
     <div class="boardSmall">${boardBadgesHTML||'<span class="muted">-</span>'}</div>`;
   div.onclick=()=>selectAndLoadDetail(it.hand_id,div);
   return div;
@@ -1530,7 +1544,10 @@ function renderPotHeader(head,acts){
   const metaInfo=startInfo+prePotInfo;
 
   // v3.9.2: 시간 표시 추가
-  const timeFormatted=formatStartedAt(head.started_at);
+  // v3.9.15: started_at_local 우선 사용 (Cyprus 로컬 시간)
+  const timeFormatted = head.started_at_local
+    ? formatLocalTime(head.started_at_local)
+    : formatStartedAt(head.started_at);
 
   return `<div class="potHeader">
     <div class="potHeader-top">
