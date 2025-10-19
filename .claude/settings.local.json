@@ -13,7 +13,8 @@
       "Bash(start \"\" \"d:\\AI\\claude01\\handlogger\\docs\\screenshots\\hand-detail-mockup.html\")",
       "Bash(python -c \"import webbrowser; webbrowser.open(''file:///d:/AI/claude01/handlogger/index.html'')\")",
       "Bash(git log:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(매칭: 11:54\"\n\n3. 서버 반환값 추가:\n   - result.matchedTime = hhmmTime\n   - 사용자가 실제 매칭된 시간 확인 가능\n\n**확인 필요**:\n- Apps Script 실행 로그에서 started_at_local 값 확인\n- 11:54 핸드가 17:54로 매칭되는지 로그 확인\n- Fallback 함수 호출 여부 확인\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

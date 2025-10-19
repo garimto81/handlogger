@@ -1077,6 +1077,14 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     // v3.9.0: started_at_local 우선 사용 (클라이언트가 로컬 HH:mm 전송)
     const hhmmTime = head.started_at_local || extractTimeHHMM_(isoTime);
 
+    // v3.9.16: 디버깅 - started_at_local 값 확인
+    Logger.log('🔍 [VIRTUAL] 시간 매칭 디버깅:');
+    Logger.log('  head.started_at_local: "' + (head.started_at_local || 'undefined') + '"');
+    Logger.log('  head.started_at (ISO): "' + (head.started_at || 'undefined') + '"');
+    Logger.log('  extractTimeHHMM_(ISO) fallback: "' + extractTimeHHMM_(isoTime) + '"');
+    Logger.log('  최종 사용 시간: "' + hhmmTime + '"');
+    Logger.log('  타입 확인: started_at_local type = ' + typeof head.started_at_local);
+
     // v3.9.0: 전체 스캔 (VIRTUAL 시트는 00:00~23:59 순서이므로 시간 기반 캐싱 불가)
     const startRow = 2;
     const scanRows = last - startRow + 1;
@@ -1244,8 +1252,9 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       Math.round(perfTimer.steps[bottleneck] / perfTimer.total * 100) + '%)');
 
     log_('PUSH_VIRTUAL_OK', `row=${pickRow}`, '');
-    const result = {success:true, row:pickRow, perf:perfTimer};
-    console.log('🎉 [VIRTUAL] 완료 - Row ' + pickRow + '에 데이터 입력 성공');
+    // v3.9.16: 매칭된 시간 정보 반환
+    const result = {success:true, row:pickRow, matchedTime: hhmmTime, perf:perfTimer};
+    console.log('🎉 [VIRTUAL] 완료 - Row ' + pickRow + '에 데이터 입력 성공 (매칭 시간: ' + hhmmTime + ')');
     console.log('sendHandToVirtual returning:', JSON.stringify(result));
     return result;
   });

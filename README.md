@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.15
+# Poker Hand Logger v3.9.16
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -14,7 +14,51 @@
 
 ---
 
-## 🚀 v3.9.15 (2025-01-19) - Review 모드 시간 표시 수정 (P0 Final Fix)
+## 🚀 v3.9.16 (2025-01-19) - VIRTUAL 시간 매칭 디버깅 강화
+
+### Debugging Enhancements
+- 🔍 **VIRTUAL 시간 매칭 디버깅 로그 추가**: started_at_local 값 추적
+  - **목적**: +6시간 오류 근본 원인 파악 (11:54 → 17:54 매칭 문제)
+  - **추가 로그**:
+    - head.started_at_local 값 확인
+    - head.started_at (ISO) 값 확인
+    - extractTimeHHMM_() fallback 값 확인
+    - 최종 사용 시간 확인
+    - 타입 확인 (typeof started_at_local)
+  - **파일**: [code.gs:1081-1086](code.gs#L1081)
+
+### UI Improvements
+- 💬 **VIRTUAL 전송 성공 메시지에 매칭 시간 표시**
+  - **Before**: "✅ 전송 성공! Row 418 업데이트됨"
+  - **After**: "✅ 전송 성공! Row 418 | 매칭: 11:54"
+  - **목적**: 사용자에게 실제 매칭된 시간 확인 제공
+  - **파일**: [index.html:1232-1236](index.html#L1232), [code.gs:1256](code.gs#L1256)
+
+### Technical Details
+```javascript
+// code.gs 디버깅 로그
+Logger.log('🔍 [VIRTUAL] 시간 매칭 디버깅:');
+Logger.log('  head.started_at_local: "' + (head.started_at_local || 'undefined') + '"');
+Logger.log('  최종 사용 시간: "' + hhmmTime + '"');
+
+// 반환값에 matchedTime 추가
+const result = {success:true, row:pickRow, matchedTime: hhmmTime, perf:perfTimer};
+```
+
+### Impact
+- ✅ **started_at_local 값 실시간 확인**: undefined/empty 여부 즉시 파악
+- ✅ **Fallback 호출 여부 확인**: extractTimeHHMM_() 호출 시 로그 출력
+- ✅ **사용자 피드백**: UI에서 매칭된 시간 확인 가능
+
+### Next Steps
+Apps Script 실행 로그에서 다음 확인 필요:
+1. `head.started_at_local` 값이 "11:54" 또는 "undefined"인지
+2. `최종 사용 시간`이 "11:54" 또는 "17:54"인지
+3. Fallback 함수 호출 여부
+
+---
+
+## 📜 v3.9.15 (2025-01-19) - Review 모드 시간 표시 수정 (P0 Final Fix)
 
 ### Bug Fixes
 - 🐛 **Review 모드 시간 표시 +6시간 오류 (P0 Final)**: formatStartedAt() 브라우저 타임존 변환 문제

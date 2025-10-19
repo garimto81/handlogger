@@ -1229,7 +1229,11 @@ function sendCurrentHandToVirtual(){
         btn.style.backgroundColor = '#22c55e';
         btn.style.borderColor = '#22c55e';
 
-        msg.textContent = `✅ 전송 성공! Row ${res.row} 업데이트됨 (선택: ${selectedSeats.length}명)`;
+        // v3.9.16: 시간 매칭 정보 표시
+        const matchInfo = res.matchedTime
+          ? ` | 매칭: ${res.matchedTime}`
+          : '';
+        msg.textContent = `✅ 전송 성공! Row ${res.row}${matchInfo} (선택: ${selectedSeats.length}명)`;
         msg.style.color = '#22c55e';
         vibrate(HAPTIC.MEDIUM); // 선택 작업 햅틱
 
