@@ -1199,12 +1199,34 @@ function sendCurrentHandToVirtual(){
   // 4. 수정된 BB 값 (v3.3.0: 포맷팅된 값 파싱)
   const bbOverride = parseFormattedNumber(document.getElementById('bbOverrideInput').value);
 
+  // v3.9.20: 구버전 핸드 호환성 - started_at을 클라이언트에서 로컬 HH:mm으로 변환
+  let startedAtLocal = null;
+  if(reviewState.currentDetail && reviewState.currentDetail.head){
+    const head = reviewState.currentDetail.head;
+    if(head.started_at_local){
+      // 신버전: started_at_local 있음
+      startedAtLocal = head.started_at_local;
+    }else if(head.started_at){
+      // 구버전: started_at만 있음 → 클라이언트에서 로컬 시간 추출
+      try{
+        const d = new Date(head.started_at);
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        startedAtLocal = `${hh}:${mm}`;
+        console.log('[FALLBACK] started_at_local 생성:', startedAtLocal, 'from', head.started_at);
+      }catch(e){
+        console.error('[ERROR] started_at 파싱 실패:', e);
+      }
+    }
+  }
+
   // 5. payload 구성
   const payload = {
     selectedSeats: selectedSeats,
     eliminatedSeats: eliminatedSeats,
     stackOverrides: stackOverrides,
-    bbOverride: bbOverride
+    bbOverride: bbOverride,
+    startedAtLocal: startedAtLocal  // v3.9.20: 클라이언트에서 계산한 로컬 시간
   };
 
   console.log('[VIRTUAL] 전송 payload:', payload);
@@ -1304,7 +1326,8 @@ function getBoardObjectForSave(){
 
 /* === Review 상태 관리 (v1.2.0) === */
 // v3.3.2: Review 리스트 지연 로딩을 위한 플래그 추가
-const reviewState={page:1,size:10,total:0,loading:false,hasMore:true,selectedId:null,loaded:false};
+// v3.9.20: currentDetail 추가 (VIRTUAL 전송 시 started_at 접근용)
+const reviewState={page:1,size:10,total:0,loading:false,hasMore:true,selectedId:null,loaded:false,currentDetail:null};
 
 function loadList(reset){
   if(reset){ reviewState.page=1; reviewState.hasMore=true; reviewState.total=0; }
@@ -1417,6 +1440,8 @@ function loadDetail(id){
           d.innerHTML = `<div class="small" style="color:#ffbdbd">형식 오류(빈 head) · id=${id}<br/><code>${sample}</code></div>`;
           return;
         }
+        // v3.9.20: 현재 핸드 데이터 저장 (VIRTUAL 전송용)
+        reviewState.currentDetail = { head, acts };
         d.innerHTML = renderDetailContent(head, acts);
       }catch(err){
         const msg=(err && (err.message||err.toString()))||'unknown';

@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.19
+# Poker Hand Logger v3.9.20
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,42 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.9.20 (2025-01-19) - 구버전 핸드 호환성 추가 (P0 Critical - Backward Compatibility)
+
+### Bug Fixes
+- 🐛 **구버전 핸드 (started_at_local 없음) 전송 오류 수정**
+  - **문제**: v3.9.19에서 `started_at_local` 필드가 없는 구버전 핸드 VIRTUAL 전송 실패
+    - 에러: `no-started_at_local`
+    - v3.9.12 이전 등록 핸드는 `started_at_local` 필드 없음
+  - **해결**: 클라이언트에서 `started_at` ISO를 로컬 HH:mm으로 변환하여 전송
+    ```javascript
+    // 클라이언트 (index.html:1203-1221)
+    let startedAtLocal = null;
+    if(head.started_at_local){
+      startedAtLocal = head.started_at_local;  // 신버전
+    }else if(head.started_at){
+      const d = new Date(head.started_at);  // 브라우저 타임존 사용
+      startedAtLocal = `${hh}:${mm}`;  // 로컬 HH:mm 생성
+    }
+    payload.startedAtLocal = startedAtLocal;
+
+    // 서버 (code.gs:1085)
+    const hhmmTime = head.started_at_local || payload.startedAtLocal;
+    ```
+  - **차이점**:
+    - **v3.9.19 fallback**: 서버에서 `new Date(isoTime).getHours()` → 서버 타임존 적용 → +6시간 ❌
+    - **v3.9.20 fallback**: 클라이언트에서 `new Date(isoTime).getHours()` → 브라우저 타임존 적용 → 정확 ✅
+  - **파일**:
+    - [index.html:1203-1221](index.html#L1203) - 클라이언트 fallback 로직
+    - [code.gs:1085](code.gs#L1085) - 서버 payload.startedAtLocal 수신
+
+### Impact
+- ✅ **구버전 핸드 VIRTUAL 전송 가능** (v3.9.12 이전 핸드 포함)
+- ✅ **신버전 핸드 정상 작동** (started_at_local 우선 사용)
+- ✅ **타임존 정확성 유지** (클라이언트 브라우저 타임존 사용)
 
 ---
 

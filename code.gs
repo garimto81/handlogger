@@ -780,7 +780,7 @@ function queryHands(filter,paging){
  */
 function getCachedHandDetail_(hand_id){
   const cache = CacheService.getScriptCache();
-  const CACHE_VERSION = 'v3.9.19'; // extractTimeHHMM_ fallback 제거
+  const CACHE_VERSION = 'v3.9.20'; // 클라이언트 fallback 지원
   const cacheKey = 'hand_' + CACHE_VERSION + '_' + hand_id;
   const cached = cache.get(cacheKey);
 
@@ -1078,18 +1078,18 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       return {success:false, reason:'no-rows'};
     }
 
-    // 3. B열 시간 매칭 (Cyprus PC 로컬 시간) - v3.9.19: fallback 제거
+    // 3. B열 시간 매칭 (Cyprus PC 로컬 시간) - v3.9.20: 클라이언트 fallback 지원
     const t3 = Date.now();
 
-    // v3.9.19: extractTimeHHMM_ fallback 완전 제거
-    // 🔴 근본 원인: extractTimeHHMM_()가 new Date(isoTime).getHours()로 서버 타임존 적용 → +6시간
-    // ✅ 해결: started_at_local만 사용 (클라이언트 PC 로컬 HH:mm 그대로)
-    const hhmmTime = head.started_at_local;
+    // v3.9.20: started_at_local 우선, 없으면 payload.startedAtLocal 사용 (클라이언트 계산)
+    const hhmmTime = head.started_at_local || payload.startedAtLocal;
 
     if(!hhmmTime){
-      Logger.log('❌ [VIRTUAL] 실패: started_at_local 없음 (구버전 핸드)');
+      Logger.log('❌ [VIRTUAL] 실패: started_at_local 없음 (payload.startedAtLocal도 없음)');
       return {success:false, reason:'no-started_at_local'};
     }
+
+    Logger.log('🔍 [VIRTUAL] 시간 매칭: "' + hhmmTime + '" (source: ' + (head.started_at_local ? 'DB' : 'client-fallback') + ')');
 
     // v3.9.0: 전체 스캔 (VIRTUAL 시트는 00:00~23:59 순서이므로 시간 기반 캐싱 불가)
     const startRow = 2;
