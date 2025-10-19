@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.20
+# Poker Hand Logger v3.9.21
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,29 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.9.21 (2025-01-19) - VIRTUAL 파일명에 테이블 번호 추가
+
+### Features
+- ✨ **파일명 형식 변경**: `{HHMM}_VT{XXXX}_T{TableNo}_{Keyplayer}_{Summary}`
+  - **Before**: `1430_VT0127_Smith_AKvsQQ`
+  - **After**: `1430_VT0127_T2_Smith_AKvsQQ`
+  - **목적**:
+    - 테이블별 핸드 검색 용이
+    - 멀티룸(Black, Feature) 테이블 구분 명확
+    - 프로듀서 파일 관리 편의성 향상
+  - **구현**:
+    - `extractTableNo_()` 함수 추가 - Type 시트에서 TableNo 조회
+    - `buildFileName_()` 수정 - T{TableNo} 삽입
+    - 캐시 버전 v3.9.21 업데이트
+  - **파일**: [code.gs:1308-1318](code.gs#L1308), [code.gs:1303-1305](code.gs#L1303)
+
+### Impact
+- ✅ **검색 향상**: 테이블 번호로 핸드 필터링 가능
+- ✅ **정렬 최적화**: 시간 → 핸드번호 → 테이블 → 플레이어 순 정렬
+- ✅ **하위 호환**: TableNo 없으면 "T0" 표시
 
 ---
 

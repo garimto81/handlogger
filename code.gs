@@ -780,7 +780,7 @@ function queryHands(filter,paging){
  */
 function getCachedHandDetail_(hand_id){
   const cache = CacheService.getScriptCache();
-  const CACHE_VERSION = 'v3.9.20'; // 클라이언트 fallback 지원
+  const CACHE_VERSION = 'v3.9.21'; // 파일명 T{TableNo} 추가
   const cacheKey = 'hand_' + CACHE_VERSION + '_' + hand_id;
   const cached = cache.get(cacheKey);
 
@@ -1291,15 +1291,30 @@ function buildFileName_(detail){
   // 2. hand_no를 4자리 숫자로 포맷팅 (0001~9999)
   const handNo = String(head.hand_no || '0').padStart(4, '0');
 
-  // 3. 키플레이어 이름 추출
+  // 3. 테이블 번호 추출 (v3.9.21: Type 시트에서 조회)
+  const tableNo = extractTableNo_(head.table_id);
+
+  // 4. 키플레이어 이름 추출
   const keyplayerName = extractKeyplayerName_(head.table_id, detail);
 
-  // 4. 핸드 요약 생성
+  // 5. 핸드 요약 생성
   const handSummary = generateHandSummary_(detail);
 
-  // 형식: {HHMM}_VT{XXXX}_{키플레이어}_{핸드}
-  // 예: 1430_VT0127_Smith_AKvsQQ
-  return `${timeFormatted}_VT${handNo}_${keyplayerName}_${handSummary}`;
+  // 형식: {HHMM}_VT{XXXX}_T{TableNo}_{키플레이어}_{핸드}
+  // 예: 1430_VT0127_T2_Smith_AKvsQQ
+  return `${timeFormatted}_VT${handNo}_T${tableNo}_${keyplayerName}_${handSummary}`;
+}
+
+/* === 테이블 번호 추출 (v3.9.21) === */
+function extractTableNo_(tableId){
+  const rosterData = getCachedRoster_();
+  const rosterList = (rosterData.roster && rosterData.roster[tableId]) || [];
+
+  if(rosterList.length === 0) return '0';
+
+  // 첫 번째 플레이어의 tableNo 사용
+  const tableNo = rosterList[0].tableNo;
+  return String(tableNo || '0');
 }
 
 /* === 키플레이어 이름 추출 (최대 20자) === */
