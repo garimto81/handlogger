@@ -1137,7 +1137,7 @@ function sendHandToVirtual(hand_id, sheetId, payload){
 
     // 4. 값 구성 (최적화: 로깅 최소화)
     const t5 = Date.now();
-    const E = '미완료';
+    const E = '수정 중'; // v3.9.10: E열 데이터 확인 규칙 준수
     const F = buildFileName_(detail);
     const G = 'A';
     const H = buildHistoryBlock_(detail, payload.bbOverride || 0);

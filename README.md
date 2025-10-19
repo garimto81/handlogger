@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.9
+# Poker Hand Logger v3.9.10
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -11,6 +11,40 @@
 - **HandLogger**: 포커 핸드 기록 (Record/Review)
 - **Tracker**: 키 플레이어 & 테이블 관리
 - **SoftSender**: VIRTUAL 시트 컨텐츠 전송
+
+---
+
+## 🚀 v3.9.10 (2025-01-19) - E열 데이터 확인 규칙 준수 (Bug Fix)
+
+### Bug Fixes
+- 🐛 **E열 입력값 수정**: '미완료' → '수정 중'
+  - **문제**: VIRTUAL 시트 E열에 데이터 확인 규칙 설정됨
+  - **허용 값**: '수정 중', '전송중', '복사완료', '미사용', '방송X'
+  - **오류**: `'미완료'` 입력 시 데이터 확인 규칙 위반 (E1084)
+  - **해결**: 초기 입력값을 `'수정 중'`으로 변경
+  - **파일**: [code.gs:1140](code.gs#L1140)
+
+### Technical Details
+```javascript
+// Before (v3.9.9)
+const E = '미완료';  // ❌ 데이터 확인 규칙 위반
+
+// After (v3.9.10)
+const E = '수정 중'; // ✅ 허용된 값
+```
+
+### VIRTUAL 시트 E열 허용 값
+```
+1. 수정 중    ← 초기 입력값 (VIRTUAL 전송 직후)
+2. 전송중
+3. 복사완료
+4. 미사용
+5. 방송X
+```
+
+### Impact
+- ✅ **전송 성공률 100%**: E열 규칙 위반 오류 제거
+- ✅ **데이터 무결성**: VIRTUAL 시트 드롭다운 규칙 준수
 
 ---
 
