@@ -776,10 +776,12 @@ function queryHands(filter,paging){
 
 /**
  * 핸드 상세 캐시 (PropertiesService, 5분 TTL)
+ * v3.9.16: 캐시 키에 버전 추가 (스키마 변경 시 자동 무효화)
  */
 function getCachedHandDetail_(hand_id){
   const cache = CacheService.getScriptCache();
-  const cacheKey = 'hand_' + hand_id;
+  const CACHE_VERSION = 'v3.9.17'; // B열 started_at_local 덮어쓰기 추가
+  const cacheKey = 'hand_' + CACHE_VERSION + '_' + hand_id;
   const cached = cache.get(cacheKey);
 
   if(cached){
@@ -1191,7 +1193,8 @@ function sendHandToVirtual(hand_id, sheetId, payload){
       console.log('✅ [VIRTUAL] J열 정상 생성 (길이: ' + J.length + ')');
     }
 
-    // 5. 비연속 컬럼 쓰기 (E,F,G,H,J,K => 5,6,7,8,10,11)
+    // 5. 비연속 컬럼 쓰기 (B,E,F,G,H,J,K => 2,5,6,7,8,10,11)
+    // v3.9.17: B열에도 started_at_local 쓰기 (시간 매칭 정확도 향상)
     console.log('💾 [VIRTUAL] 시트 쓰기 시작');
     console.log('  📄 시트 정보:');
     console.log('    - 스프레드시트 ID: ' + sheetId);
@@ -1202,6 +1205,8 @@ function sendHandToVirtual(hand_id, sheetId, payload){
     console.log('');
 
     const t6 = Date.now();
+    sh.getRange(pickRow, 2, 1, 1).setValue(hhmmTime); // v3.9.17: B열 덮어쓰기
+    console.log('  ✓ B열 (col 2) 완료 - 입력값: ' + hhmmTime);
     sh.getRange(pickRow, 5, 1, 1).setValue(E);
     console.log('  ✓ E열 (col 5) 완료 - 입력값: ' + E);
     sh.getRange(pickRow, 6, 1, 1).setValue(F);

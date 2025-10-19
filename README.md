@@ -1,4 +1,4 @@
-# Poker Hand Logger v3.9.16
+# Poker Hand Logger v3.9.17
 
 **HandLogger + Tracker + SoftSender** 통합 프로젝트
 
@@ -14,7 +14,70 @@
 
 ---
 
-## 🚀 v3.9.16 (2025-01-19) - VIRTUAL 시간 매칭 디버깅 강화
+## 🚀 v3.9.17 (2025-01-19) - VIRTUAL B열 덮어쓰기 추가 (P0 Critical - Time Sync)
+
+### Enhancements
+- ⚡ **VIRTUAL B열 시간 동기화**: 매칭 시 B열에도 `started_at_local` 값 쓰기
+  - **문제**: B열에 다른 값(예: 17:54)이 있을 때 11:54 핸드 매칭이 성공해도 B열은 유지됨
+  - **해결**: 시간 매칭 성공 시 B열도 `hhmmTime`으로 덮어쓰기
+  - **효과**:
+    - ✅ B열 값과 실제 매칭된 시간 일치 보장
+    - ✅ 다음 매칭 시 정확한 시간으로 재매칭 가능
+    - ✅ VIRTUAL 시트 데이터 일관성 향상
+  - **파일**: [code.gs:1208-1209](code.gs#L1208)
+  - **캐시 버전**: v3.9.17로 업데이트 (자동 캐시 무효화)
+
+### Technical Details
+```javascript
+// v3.9.17: B열 덮어쓰기 추가
+sh.getRange(pickRow, 2, 1, 1).setValue(hhmmTime); // B열 = started_at_local
+console.log('  ✓ B열 (col 2) 완료 - 입력값: ' + hhmmTime);
+```
+
+**Before**: B열에 17:54가 있고 11:54 매칭 성공 → E~K열만 업데이트 → B열은 17:54 유지 ❌
+**After**: B열에 17:54가 있고 11:54 매칭 성공 → **B열도 11:54로 수정** + E~K열 업데이트 ✅
+
+---
+
+## 🚀 v3.9.16 (2025-01-19) - 캐시 무효화 수정 (P0 Critical - Cache Invalidation)
+
+### Bug Fixes
+- 🐛 **캐시 무효화 문제 (P0 Critical - Root Cause)**: 오래된 캐시로 인한 started_at_local 누락
+  - **최종 근본 원인**:
+    - `getCachedHandDetail_()`: 5분간 캐시 사용
+    - v3.9.14 이전 코드로 조회한 핸드 → started_at_local 없이 캐시됨
+    - v3.9.14 배포 후에도 **오래된 캐시가 5분간 유지**
+    - VIRTUAL 전송 시 캐시된 데이터 사용 → started_at_local = undefined → fallback 함수 호출 → +6시간
+  - **증상**:
+    - Review 모드 표시: 11:54 (정상 - queryHands는 캐시 미사용)
+    - VIRTUAL 매칭: 17:54 (오류 - getCachedHandDetail는 캐시 사용)
+  - **해결**:
+    - 캐시 키에 버전 추가: `'hand_v3.9.16_' + hand_id`
+    - 스키마 변경 시 자동 캐시 무효화
+  - **파일**: [code.gs:783-784](code.gs#L783)
+
+### Technical Details
+```javascript
+// Before (v3.9.15) - 버전 없는 캐시 키
+const cacheKey = 'hand_' + hand_id;
+// v3.9.14 이전 데이터 캐시 → started_at_local 없음 ❌
+
+// After (v3.9.16) - 버전 포함 캐시 키
+const CACHE_VERSION = 'v3.9.16';
+const cacheKey = 'hand_' + CACHE_VERSION + '_' + hand_id;
+// 새 버전 배포 시 자동으로 캐시 무효화 ✅
+```
+
+### Impact
+- ✅ **오래된 캐시 자동 무효화**: 버전 변경 시 캐시 미스 발생 → 최신 데이터 조회
+- ✅ **VIRTUAL 매칭 정상화**: started_at_local 정상 반환 → 11:54 == 11:54
+- ✅ **스키마 변경 안전성**: 향후 필드 추가 시 버전만 변경하면 캐시 자동 갱신
+
+### Debugging (유지)
+
+---
+
+## 📜 v3.9.16-debug (2025-01-19) - VIRTUAL 시간 매칭 디버깅 강화
 
 ### Debugging Enhancements
 - 🔍 **VIRTUAL 시간 매칭 디버깅 로그 추가**: started_at_local 값 추적
