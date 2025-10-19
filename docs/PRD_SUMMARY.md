@@ -1,7 +1,7 @@
 # PRD 요약 문서
-## Poker Hand Logger v3.9.20
+## Poker Hand Logger v3.9.22
 
-**문서 버전**: 3.9.20 | **최종 업데이트**: 2025-01-19 | **5분 완독용**
+**문서 버전**: 3.9.22 | **최종 업데이트**: 2025-01-19 | **5분 완독용**
 
 ---
 
@@ -10,7 +10,7 @@
 
 ---
 
-## 📊 핵심 지표 (v3.9.20)
+## 📊 핵심 지표 (v3.9.22)
 
 | 지표 | 목표 | 현재 |
 |------|------|------|
@@ -25,6 +25,51 @@
 ---
 
 ## 🚀 주요 변경사항
+
+### v3.9.22 (2025-01-19) - Review 탭 핸드 상세 조회 오류 수정 (P0 Critical)
+| 이슈 | 상태 | 조치 |
+|------|------|------|
+| **getHandDetail() undefined 응답** | Critical | ✅ ended_at 컬럼 매핑 추가 |
+| **buildHead() 컬럼 밀림** | Critical | ✅ safeGet() 헬퍼 함수 도입 |
+| **캐시 무효화** | Medium | ✅ 버전 키 v3.9.22 |
+
+**근본 원인**:
+- HANDS 시트 스키마에 `ended_at` 컬럼(8번째) 존재
+- `buildHead()` 함수에서 `ended_at` 매핑 누락
+- 이후 모든 컬럼(btn_seat, board_*, pre_pot 등)이 한 열씩 밀림
+
+**해결 (v3.9.22)**:
+```javascript
+// Before
+started_at_local: String(r[m['started_at_local']] || ''),
+board: { f1: r[m['board_f1']] || '', ... }  // ended_at 누락!
+
+// After
+const safeGet = (key, defaultVal = '') => {
+  const idx = m[key];
+  return (idx !== undefined) ? r[idx] : defaultVal;
+};
+return {
+  started_at_local: String(safeGet('started_at_local')),
+  ended_at: String(safeGet('ended_at')),  // 추가!
+  board: { f1: safeGet('board_f1') || '', ... }
+};
+```
+
+**영향도**: Review 탭 정상 작동 + VIRTUAL 전송 정상화
+**파일**: [code.gs:824-853](../code.gs#L824)
+
+---
+
+### v3.9.21 (2025-01-19) - VIRTUAL 파일명에 테이블 번호 추가
+| 항목 | Before | After |
+|------|--------|-------|
+| **파일명 형식** | `{HHMM}_VT{XXXX}_{Keyplayer}_{Summary}` | `{HHMM}_VT{XXXX}_T{TableNo}_{Keyplayer}_{Summary}` |
+| **예시** | `1430_VT0127_Smith_AKvsQQ` | `1430_VT0127_T2_Smith_AKvsQQ` |
+
+**구현**: `extractTableNo_()` 함수 추가 (Type 시트에서 TableNo 조회)
+
+---
 
 ### v3.9.20 (2025-01-19) - 타임존 근본 수정 + 하위 호환성 (P0 Critical Fix)
 | 이슈 | 상태 | 조치 |
